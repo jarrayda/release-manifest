@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Manifest — Retail Express</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --re-blue:#00A8DB; --re-blue-dk:#0087b3; --re-blue-lt:#e6f7fc;
+    --re-pink:#E8175D; --re-pink-lt:#fde8ef;
+    --re-navy:#0B1E25; --re-navy-lt:#1a3340;
+    --bg:#f0f4f6; --surface:#ffffff; --surface2:#f7f9fa;
+    --border:#dde3e7; --border-dk:#c4cdd3;
+    --text:#0B1E25; --text-mid:#3d5260; --muted:#7a909e;
+    --success:#00a86b; --warning:#f59e0b; --danger:#E8175D;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px;}
+  .topbar{background:var(--re-navy);padding:0 32px;display:flex;align-items:center;height:56px;gap:12px;}
+  .topbar-logo{font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.03em;}
+  .topbar-logo span{color:var(--re-blue);}
+  .topbar-div{width:1px;height:20px;background:rgba(255,255,255,0.2);}
+  .topbar-sub{font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:0.06em;text-transform:uppercase;}
+  .page{max-width:1100px;margin:0 auto;padding:32px 24px 80px;}
+  .page-title{font-size:28px;font-weight:800;color:var(--re-navy);letter-spacing:-0.03em;margin-bottom:4px;}
+  .page-title span{color:var(--re-blue);}
+  .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(11,30,37,0.06);}
+  .card-title{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:12px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;justify-content:space-between;}
+  .field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;}
+  .field input:focus,.field select:focus{border-color:var(--re-blue);box-shadow:0 0 0 3px rgba(0,168,219,0.12);}
+  .field input::placeholder{color:var(--muted);}
+  .field select{cursor:pointer;}
+
+  /* Date section */
+  .date-section{background:var(--re-blue-lt);border:2px solid var(--re-blue);border-radius:12px;padding:20px 22px;margin-bottom:16px;}
+  .date-section-label{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--re-blue-dk);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+  .date-inputs{display:grid;grid-template-columns:1fr 36px 1fr;gap:10px;align-items:center;}
+  .date-arrow{text-align:center;color:var(--re-blue);font-size:22px;font-weight:300;line-height:1;}
+  .date-field{display:flex;flex-direction:column;gap:5px;}
+  .date-field label{font-size:12px;font-weight:600;color:var(--re-blue-dk);}
+  .date-field input[type=date]{background:#fff;border:2px solid var(--re-blue);border-radius:9px;padding:11px 14px;color:var(--re-navy);font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;cursor:pointer;letter-spacing:0.02em;}
+  .date-field input[type=date]:focus{border-color:var(--re-blue-dk);box-shadow:0 0 0 3px rgba(0,168,219,0.2);}
+  .date-hint{font-size:11px;font-weight:600;color:var(--success);display:none;margin-top:3px;}
+
+  .divider{border:none;border-top:1px solid var(--border);margin:18px 0;}
+  .help-text{font-size:12px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:10px 14px;border-left:3px solid var(--re-blue);line-height:1.6;margin-bottom:16px;}
+  .help-text a{color:var(--re-blue);text-decoration:none;}
+  .help-text a:hover{text-decoration:underline;}
+  .help-text strong{color:var(--text-mid);}
+
+  .btn-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px;}
+  .run-btn{display:inline-flex;align-items:center;gap:8px;background:var(--re-pink);color:#fff;border:none;border-radius:var(--radius);padding:12px 28px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s,transform .1s,box-shadow .15s;box-shadow:0 2px 10px rgba(232,23,93,0.35);}
+  .run-btn:hover{background:#c9134f;transform:translateY(-1px);box-shadow:0 4px 16px rgba(232,23,93,0.4);}
+  .run-btn:active{transform:translateY(0);}
+  .run-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none;}
+  .run-btn svg{width:15px;height:15px;}
+  .export-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text-mid);border-radius:var(--radius);padding:10px 18px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s;}
+  .export-btn:hover{border-color:var(--re-blue);color:var(--re-blue);}
+  .refresh-btn{background:none;border:none;color:var(--re-blue);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;display:inline-flex;align-items:center;gap:4px;padding:0;font-weight:500;}
+  .refresh-btn:hover{color:var(--re-blue-dk);}
+
+  .status-bar{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:14px;display:none;line-height:1.5;}
+  .status-bar.visible{display:block;}
+  .status-bar.error{color:var(--danger);background:var(--re-pink-lt);border-color:rgba(232,23,93,0.3);}
+  .status-bar.success{color:var(--success);background:#edfaf4;border-color:rgba(0,168,107,0.3);}
+
+  .results-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;}
+  .results-title{font-size:18px;font-weight:800;color:var(--re-navy);}
+  .results-meta{font-size:12px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+
+  .summary-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text-mid);}
+  .chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;overflow-x:auto;box-shadow:0 1px 4px rgba(11,30,37,0.05);}
+  .issue-table{width:100%;border-collapse:collapse;}
+  .issue-table thead{background:var(--re-navy);}
+  .issue-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.65);padding:11px 14px;}
+  .issue-table td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .issue-table tr:last-child td{border-bottom:none;}
+  .issue-table tbody tr:hover{background:var(--re-blue-lt);}
+
+  .issue-key{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--re-blue);white-space:nowrap;text-decoration:none;}
+  .issue-key:hover{text-decoration:underline;color:var(--re-blue-dk);}
+  .issue-summary{font-size:13px;font-weight:500;line-height:1.4;max-width:400px;color:var(--text);}
+  .type-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;white-space:nowrap;}
+  .status-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .assignee-cell{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:13px;}
+  .avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--re-blue),var(--re-navy));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .pr-count{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--muted);}
+
+  .results-section{display:none;}
+  .results-section.visible{display:block;}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media(max-width:700px){.form-grid{grid-template-columns:1fr;}.date-inputs{grid-template-columns:1fr;}.date-arrow{display:none;}.page-title{font-size:22px;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">Retail<span>Express</span></div>
+  <div class="topbar-div"></div>
+  <div class="topbar-sub">Dev Tooling</div>
+</div>
+
+<div class="page">
+  <h1 class="page-title">Release <span>Manifest</span></h1>
+  <p class="page-sub">Generate a list of Jira work items merged into a branch between two dates</p>
+
+  <div class="card">
+    <div class="card-title">Query</div>
+    <input type="hidden" id="bb-workspace" value="maropost-retail-cloud">
+    <input type="hidden" id="jira-url" value="https://maropost.atlassian.net">
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Repository</label>
+        <select id="bb-repo" onchange="onRepoChange()">
+          <option value="core">core</option>
+          <option value="coreapi">coreapi</option>
+          <option value="coreui">coreui</option>
+          <option value="rex">rex</option>
+          <option value="coreqa">coreqa</option>
+          <option value="shopify-service">shopify-service</option>
+          <option value="packages" selected>packages</option>
+          <option value="datawarehouse">datawarehouse</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>
+          Target Branch
+          <button class="refresh-btn" id="refresh-btn" onclick="refreshBranches()" title="Refresh branches from Bitbucket">
+            <svg id="refresh-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+        </label>
+        <select id="bb-branch" onchange="onBranchChange()">
+          <optgroup label="Main branches">
+            <option value="master">master</option>
+            <option value="main">main</option>
+            <option value="development">development</option>
+            <option value="production">production</option>
+          </optgroup>
+          <optgroup label="Release branches">
+            <option value="release/3.19.04">release/3.19.04</option>
+            <option value="release/3.19.03.3">release/3.19.03.3</option>
+            <option value="release/3.19.03.2">release/3.19.03.2</option>
+          </optgroup>
+          <optgroup label="Feature branches">
+            <option value="feature/multi_supplier">feature/multi_supplier</option>
+            <option value="feature/timezone_reporting">feature/timezone_reporting</option>
+            <option value="feature/purchaseorder_stockreceipt_enhancements">feature/purchaseorder_stockreceipt_enhancements</option>
+            <option value="feature/general_enhancements/3.18.02">feature/general_enhancements/3.18.02</option>
+            <option value="feature/authentication_phase2">feature/authentication_phase2</option>
+            <option value="feature/redis_update_2">feature/redis_update_2</option>
+            <option value="feature/FF_CleanUp">feature/FF_CleanUp</option>
+            <option value="feature/salesperformance_r2">feature/salesperformance_r2</option>
+            <option value="feature/jetsend_r1">feature/jetsend_r1</option>
+            <option value="feature/sales_staff_perfomance">feature/sales_staff_perfomance</option>
+            <option value="feature/inventory_mass_upload">feature/inventory_mass_upload</option>
+            <option value="feature/core_shopify_integration">feature/core_shopify_integration</option>
+            <option value="feature/jspm_v5">feature/jspm_v5</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <div class="date-section">
+      <div class="date-section-label">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Date Range — show PRs merged between these dates
+      </div>
+      <div class="date-inputs">
+        <div class="date-field">
+          <label>From (inclusive)</label>
+          <input type="date" id="date-from">
+          <span class="date-hint" id="date-from-hint">↑ auto-set from branch creation date</span>
+        </div>
+        <div class="date-arrow">&#8594;</div>
+        <div class="date-field">
+          <label>To (inclusive)</label>
+          <input type="date" id="date-to">
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title">Jira Credentials</div>
+
+    <div class="form-grid" style="margin-bottom:10px;">
+      <div class="field">
+        <label>Atlassian Email</label>
+        <input type="text" id="jira-user" placeholder="your@email.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Atlassian API Token</label>
+        <input type="password" id="jira-token" placeholder="API token" autocomplete="off">
+      </div>
+    </div>
+    <div class="help-text">
+      <strong>Jira:</strong> Create an API token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">id.atlassian.com → Security → API tokens</a>.<br>
+      <strong>Bitbucket:</strong> Uses your active browser session — make sure you're logged in to Bitbucket in this browser. No separate token needed.
+    </div>
+
+    <div class="btn-row">
+      <button class="run-btn" id="run-btn" onclick="runQuery()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Generate Manifest
+      </button>
+      <button class="export-btn" id="export-btn" onclick="exportCSV()" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+    <div class="status-bar" id="status-bar"></div>
+  </div>
+
+  <div class="results-section" id="results-section">
+    <div class="results-header">
+      <div>
+        <div class="results-title">Release Items</div>
+        <div class="results-meta" id="results-meta"></div>
+      </div>
+    </div>
+    <div class="summary-row" id="summary-row"></div>
+    <div class="table-wrap">
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status</th><th>Assignee</th><th style="text-align:center">PRs</th></tr></thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function setStatus(msg,type=''){const el=document.getElementById('status-bar');el.textContent=msg;el.className='status-bar visible'+(type?' '+type:'');}
+function btoa64(str){return btoa(unescape(encodeURIComponent(str)));}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function fetchMergedPRs(workspace,repo,branch,from,to){
+  const fromDate=new Date(from+'T00:00:00Z'),toDate=new Date(to+'T23:59:59Z');
+  let allPRs=[],page=1,stopEarly=false;
+  while(!stopEarly){
+    setStatus('Fetching Bitbucket PRs — page '+page+'…');
+    const url='https://bitbucket.org/!api/2.0/repositories/'+encodeURIComponent(workspace)+'/'+encodeURIComponent(repo)+'/pullrequests?state=MERGED&pagelen=50&sort=-updated_on&page='+page;
+    const resp=await fetch(url,{credentials:'include'});
+    if(!resp.ok){const t=await resp.text();throw new Error('Bitbucket '+resp.status+': '+t);}
+    const data=await resp.json();const prs=data.values||[];
+    if(!prs.length)break;
+    for(const pr of prs){
+      const mergedOn=new Date(pr.updated_on),dest=pr.destination?.branch?.name||'';
+      if(mergedOn<fromDate){stopEarly=true;break;}
+      if(mergedOn<=toDate&&(!branch||dest===branch))allPRs.push(pr);
+    }
+    if(!data.next)break;page++;
+  }
+  return allPRs;
+}
+
+async function fetchJiraIssues(keys,jiraUrl,jiraUser,jiraToken){
+  const auth=btoa64(jiraUser+':'+jiraToken);
+  const headers={'Authorization':'Basic '+auth,'Content-Type':'application/json'};
+  const base=jiraUrl.replace(/\/$/,'');const issues={};const chunks=[];
+  for(let i=0;i<keys.length;i+=50)chunks.push(keys.slice(i,i+50));
+  for(let i=0;i<chunks.length;i++){
+    setStatus('Fetching Jira issues — batch '+(i+1)+'/'+chunks.length+'…');
+    const jql='issueKey in ('+chunks[i].join(',')+')';
+    const resp=await fetch(base+'/rest/api/3/search?jql='+encodeURIComponent(jql)+'&fields=summary,status,issuetype,assignee&maxResults=100',{headers});
+    if(!resp.ok){const t=await resp.text();throw new Error('Jira '+resp.status+': '+t);}
+    const data=await resp.json();
+    for(const issue of(data.issues||[]))issues[issue.key]=issue;
+  }
+  return issues;
+}
+
+function extractJiraKey(text){const m=String(text).match(/([A-Z][A-Z0-9]+-\d+)/);return m?m[1]:null;}
+
+const TYPE_COLORS={'Bug':{bg:'#fde8ef',color:'#c0134a',icon:'🐛'},'Story':{bg:'#e6f7fc',color:'#0087b3',icon:'📖'},'Task':{bg:'#eaf6ff',color:'#0073b7',icon:'✓'},'Sub-task':{bg:'#f0ebff',color:'#6b3ec4',icon:'↳'},'Epic':{bg:'#fff8e6',color:'#b07800',icon:'⚡'},'Improvement':{bg:'#e6faf0',color:'#007a4d',icon:'↑'},'New Feature':{bg:'#e6f7fc',color:'#0087b3',icon:'✨'}};
+const STATUS_COLORS={'Done':{bg:'#e6faf0',color:'#007a4d'},'In Progress':{bg:'#fff8e6',color:'#b07800'},'To Do':{bg:'#f0f4f6',color:'#5a7080'},'In Review':{bg:'#e6f7fc',color:'#0087b3'},'Closed':{bg:'#e6faf0',color:'#007a4d'},'Resolved':{bg:'#e6faf0',color:'#007a4d'}};
+function typeBadge(n){const t=TYPE_COLORS[n]||{bg:'#f0f4f6',color:'#5a7080',icon:'·'};return '<span class="type-badge" style="background:'+t.bg+';color:'+t.color+'">'+t.icon+' '+escHtml(n||'Unknown')+'</span>';}
+function statusBadge(n){const s=STATUS_COLORS[n]||{bg:'#f0f4f6',color:'#5a7080'};return '<span class="status-badge" style="background:'+s.bg+';color:'+s.color+'">'+escHtml(n||'—')+'</span>';}
+function initials(name){return String(name||'?').split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);}
+
+let currentData=[];
+
+function renderResults(rows,from,to,branch){
+  document.getElementById('results-meta').textContent='Branch: '+branch+'  ·  '+from+' → '+to+'  ·  '+rows.length+' item'+(rows.length!==1?'s':'');
+  const byStatus={},byType={};
+  for(const r of rows){const s=r.issue?.fields?.status?.name||'Unknown';const t=r.issue?.fields?.issuetype?.name||'Unknown';byStatus[s]=(byStatus[s]||0)+1;byType[t]=(byType[t]||0)+1;}
+  const dots={'Done':'#00a86b','In Progress':'#f59e0b','To Do':'#7a909e','Closed':'#00a86b','Resolved':'#00a86b'};
+  document.getElementById('summary-row').innerHTML=Object.entries(byStatus).map(function([s,c]){return '<div class="chip"><span class="chip-dot" style="background:'+(dots[s]||'#7a909e')+'"></span>'+c+' '+escHtml(s)+'</div>';}).join('')+Object.entries(byType).map(function([t,c]){return '<div class="chip" style="opacity:0.75">'+c+' '+escHtml(t)+'</div>';}).join('');
+  const jiraBase=document.getElementById('jira-url').value.replace(/\/$/,'');
+  document.getElementById('results-body').innerHTML=rows.map(function(r){const f=r.issue?.fields||{};return '<tr><td><a class="issue-key" href="'+jiraBase+'/browse/'+r.key+'" target="_blank">'+r.key+'</a></td><td><div class="issue-summary">'+(r.issue?escHtml(f.summary||''):'<span style="color:var(--muted);font-style:italic">Not found in Jira</span>')+'</div></td><td>'+(r.issue?typeBadge(f.issuetype?.name):'—')+'</td><td>'+(r.issue?statusBadge(f.status?.name):'—')+'</td><td><div class="assignee-cell"><div class="avatar">'+initials(f.assignee?.displayName)+'</div>'+escHtml(f.assignee?.displayName||'Unassigned')+'</div></td><td style="text-align:center"><span class="pr-count">'+r.prCount+'</span></td></tr>';}).join('');
+  document.getElementById('results-section').classList.add('visible');
+  document.getElementById('export-btn').style.display='inline-flex';
+  currentData=rows;
+}
+
+function exportCSV(){
+  const jiraBase=document.getElementById('jira-url').value.replace(/\/$/,'');
+  const rows=[['Key','Summary','Type','Status','Assignee','PR Count','URL']];
+  for(const r of currentData){const f=r.issue?.fields||{};rows.push([r.key,f.summary||'',f.issuetype?.name||'',f.status?.name||'',f.assignee?.displayName||'Unassigned',r.prCount,jiraBase+'/browse/'+r.key]);}
+  const csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='release-manifest-'+document.getElementById('date-from').value+'-'+document.getElementById('date-to').value+'.csv';a.click();
+}
+
+function btnLabel(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Manifest';}
+
+async function runQuery(){
+  const workspace=document.getElementById('bb-workspace').value;
+  const repo=document.getElementById('bb-repo').value;
+  const branch=document.getElementById('bb-branch').value;
+  const from=document.getElementById('date-from').value;
+  const to=document.getElementById('date-to').value;
+  const jiraUser=document.getElementById('jira-user').value.trim();
+  const jiraToken=document.getElementById('jira-token').value.trim();
+  const jiraUrl=document.getElementById('jira-url').value;
+  const missing=[];
+  if(!from)missing.push('From date');if(!to)missing.push('To date');if(!jiraUser)missing.push('Atlassian Email');if(!jiraToken)missing.push('API Token');
+  if(missing.length){setStatus('⚠ Please fill in: '+missing.join(', '),'error');return;}
+  const btn=document.getElementById('run-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Running…';
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('export-btn').style.display='none';
+  try{
+    const prs=await fetchMergedPRs(workspace,repo,branch,from,to);
+    setStatus('Found '+prs.length+' merged PR'+(prs.length!==1?'s':'')+' — extracting Jira keys…');
+    if(!prs.length){setStatus('No merged PRs found for "'+branch+'" in that date range.','error');btn.disabled=false;btn.innerHTML=btnLabel();return;}
+    const keyPRMap={};
+    for(const pr of prs){const key=extractJiraKey(pr.title)||extractJiraKey(pr.source?.branch?.name||'');if(key){if(!keyPRMap[key])keyPRMap[key]={prCount:0};keyPRMap[key].prCount++;}}
+    const keys=Object.keys(keyPRMap);
+    if(!keys.length){setStatus('PRs found but no Jira keys extracted. Check PR naming convention (MRCDEV-XXXXX-...).','error');btn.disabled=false;btn.innerHTML=btnLabel();return;}
+    setStatus('Extracted '+keys.length+' Jira keys — fetching issue details…');
+    const issues=await fetchJiraIssues(keys,jiraUrl,jiraUser,jiraToken);
+    const rows=keys.sort().map(function(key){return{key:key,prCount:keyPRMap[key].prCount,issue:issues[key]||null};});
+    renderResults(rows,from,to,branch||'any');
+    setStatus('Done — '+rows.length+' issue'+(rows.length!==1?'s':'')+' from '+prs.length+' PRs','success');
+  }catch(err){setStatus('Error: '+err.message,'error');console.error(err);}
+  btn.disabled=false;btn.innerHTML=btnLabel();
+}
+
+const branchDateMap={};
+async function onBranchChange(){const branch=document.getElementById('bb-branch').value;if(branchDateMap[branch]){setDateFrom(branchDateMap[branch]);return;}await fetchBranchCreationDate(branch);}
+async function fetchBranchCreationDate(branch){
+  const workspace=document.getElementById('bb-workspace').value;const repo=document.getElementById('bb-repo').value;
+  try{
+    const url='https://bitbucket.org/!api/2.0/repositories/'+encodeURIComponent(workspace)+'/'+encodeURIComponent(repo)+'/commits?include='+encodeURIComponent(branch)+'&pagelen=1&sort=date';
+    const resp=await fetch(url,{credentials:'include'});if(!resp.ok)return;
+    const data=await resp.json();const date=(data.values||[])[0]?.date;if(!date)return;
+    const dateStr=date.substring(0,10);branchDateMap[branch]=dateStr;setDateFrom(dateStr);
+  }catch(e){}
+}
+function setDateFrom(dateStr){document.getElementById('date-from').value=dateStr;const hint=document.getElementById('date-from-hint');hint.style.display='block';clearTimeout(window._hintTimer);window._hintTimer=setTimeout(function(){hint.style.display='none';},5000);}
+
+function onRepoChange(){const btn=document.getElementById('refresh-btn');btn.style.color='var(--warning)';btn.title='Repo changed — click to reload branches';}
+async function refreshBranches(){
+  const workspace=document.getElementById('bb-workspace').value;const repo=document.getElementById('bb-repo').value;
+  const icon=document.getElementById('refresh-icon');const btn=document.getElementById('refresh-btn');
+  icon.style.animation='spin 0.7s linear infinite';btn.disabled=true;setStatus('Fetching branches for '+repo+'…');
+  try{
+    let allBranches=[],url='https://bitbucket.org/!api/2.0/repositories/'+encodeURIComponent(workspace)+'/'+encodeURIComponent(repo)+'/refs/branches?pagelen=100&sort=-target.date';
+    while(url){const resp=await fetch(url,{credentials:'include'});if(!resp.ok)throw new Error('Bitbucket '+resp.status);const data=await resp.json();allBranches=allBranches.concat(data.values||[]);url=data.next||null;}
+    const filtered=allBranches.map(function(b){return b.name;}).filter(function(n){return !n.startsWith('workitem/')&&!/^MRCDEV/i.test(n);});
+    const main=['master','main','development','production'].filter(function(n){return filtered.includes(n);});
+    const releases=filtered.filter(function(n){return n.startsWith('release/');}).sort().reverse();
+    const features=filtered.filter(function(n){return n.startsWith('feature/');});
+    const others=filtered.filter(function(n){return !main.includes(n)&&!n.startsWith('release/')&&!n.startsWith('feature/');});
+    const sel=document.getElementById('bb-branch');const prev=sel.value;sel.innerHTML='';
+    function addGroup(label,names){if(!names.length)return;const og=document.createElement('optgroup');og.label=label;names.forEach(function(n){const o=document.createElement('option');o.value=n;o.textContent=n;if(n===prev)o.selected=true;og.appendChild(o);});sel.appendChild(og);}
+    addGroup('Main branches',main);addGroup('Release branches',releases);addGroup('Feature branches',features);if(others.length)addGroup('Other',others);
+    setStatus('Branches refreshed — '+filtered.length+' loaded for '+repo,'success');
+    const selected=document.getElementById('bb-branch').value;if(selected)await fetchBranchCreationDate(selected);
+    btn.style.color='var(--re-blue)';btn.title='Refresh branch list';
+  }catch(err){setStatus('Refresh failed: '+err.message,'error');}
+  icon.style.animation='';btn.disabled=false;
+}
+</script>
+</body>
+</html>
