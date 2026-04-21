@@ -312,7 +312,7 @@ async function proxyFetch(url, basicAuth) {
       messages: [{ role: 'user', content: `GET ${url}\nAuthorization: ${basicAuth}` }]
     })
   });
-  if (!resp.ok) throw new Error('Proxy HTTP ' + resp.status);
+ if (!resp.ok) { const e = await resp.json().catch(() => resp.text()); throw new Error('Proxy ' + resp.status + ': ' + JSON.stringify(e)); }
   const data = await resp.json();
   const raw = (data.content || []).map(b => b.text || '').join('').trim();
   const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
