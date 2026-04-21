@@ -126,6 +126,12 @@
   .copy-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;}
   .copy-btn:hover{background:rgba(255,255,255,0.18);color:#fff;}
   .copy-btn.copied{background:rgba(0,168,107,0.3);border-color:rgba(0,168,107,0.5);color:#4cffb0;}
+  .branch-item{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .branch-item:last-child{border-bottom:none;}
+  .branch-item:hover,.branch-item.selected{background:var(--re-blue-lt);color:var(--re-blue-dk);}
+  .branch-item.selected{font-weight:600;}
+  .branch-group-label{padding:5px 12px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);}
+  #bb-branch-search:focus{border-radius:var(--radius) var(--radius) 0 0;}
 </style>
 </head>
 <body>
@@ -196,11 +202,12 @@
           <option value="datawarehouse">datawarehouse</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>Target Branch</label>
-        <select id="bb-branch" onchange="onBranchChange()" disabled>
-          <option value="">— loading branches —</option>
-        </select>
+        <input type="text" id="bb-branch-search" placeholder="— connect to load branches —" disabled autocomplete="off" oninput="filterBranches()" onfocus="showBranchList()" onblur="hideBranchList()" style="padding-right:32px;">
+        <input type="hidden" id="bb-branch" value="">
+        <div id="branch-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1.5px solid var(--re-blue);border-top:none;border-radius:0 0 var(--radius) var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(11,30,37,0.12);">
+        </div>
       </div>
     </div>
     <div class="date-section">
@@ -310,18 +317,19 @@ function proxyHeaders() {
 
 // ── Generic proxy call ─────────────────────────────────
 // Asks Claude (server-side) to fetch a URL with Basic auth and return raw JSON.
-async function proxyFetch(url, basicAuth, maxTokens=8192) {
+async function proxyFetch(url, basicAuth, systemPrompt=null, maxTokens=8192) {
+  const sysPrompt = systemPrompt || 'You are an HTTP proxy. The user gives you a URL and an Authorization header value. Fetch that URL server-side using that Authorization header plus Accept: application/json. Return ONLY the raw JSON response body — no commentary, no markdown fences, no explanation. Just the JSON.';
   const resp = await fetch(PROXY, {
     method: 'POST',
     headers: proxyHeaders(),
     body: JSON.stringify({
       model: MODEL,
       max_tokens: maxTokens,
-      system: 'You are an HTTP proxy. The user gives you a URL and an Authorization header value. Fetch that URL server-side using that Authorization header plus Accept: application/json. Return ONLY the raw JSON response body — no commentary, no markdown fences, no explanation. Just the JSON.',
+      system: sysPrompt,
       messages: [{ role: 'user', content: `GET ${url}\nAuthorization: ${basicAuth}` }]
     })
   });
-  if (!resp.ok) throw new Error('Proxy HTTP ' + resp.status);
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error('Proxy ' + resp.status + ': ' + (e?.error?.message || JSON.stringify(e))); }
   const data = await resp.json();
   const raw = (data.content || []).map(b => b.text || '').join('').trim();
   const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
@@ -330,6 +338,27 @@ async function proxyFetch(url, basicAuth, maxTokens=8192) {
   } catch(e) {
     throw new Error('Proxy returned non-JSON: ' + clean.slice(0, 300));
   }
+}
+
+// Branch-specific proxy: returns ONLY {names: [...], next: "..."} to avoid truncation
+async function bbBranchProxy(url) {
+  const auth = 'Basic ' + b64(atlEmail + ':' + atlToken);
+  const system = `You are an HTTP proxy. Fetch the given URL with the given Authorization header. From the JSON response, extract ONLY: the "name" field from each item in "values", and the "next" field at the top level. Return a compact JSON object like: {"names":["branch1","branch2"],"next":"https://..."} — use null for next if not present. No other fields. No markdown.`;
+  const resp = await fetch(PROXY, {
+    method: 'POST',
+    headers: proxyHeaders(),
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 4096,
+      system,
+      messages: [{ role: 'user', content: `GET ${url}\nAuthorization: ${auth}` }]
+    })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error('Proxy ' + resp.status + ': ' + (e?.error?.message || JSON.stringify(e))); }
+  const data = await resp.json();
+  const raw = (data.content || []).map(b => b.text || '').join('').trim();
+  const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
+  return JSON.parse(clean);
 }
 
 function bbAuth()   { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
@@ -409,13 +438,16 @@ async function loadBranches(repo) {
 
   let all = [];
   let url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/refs/branches?pagelen=100&sort=-target.date`;
+  let page = 1;
   while (url) {
-    const data = await proxyFetch(url, bbAuth(), 16000);
-    all = all.concat(data.values || []);
+    setStatus('connect-status', 'Loading branches — page ' + page + '…', 'info');
+    const data = await bbBranchProxy(url);
+    all = all.concat(data.names || []);
     url = data.next || null;
+    page++;
   }
 
-  const names    = all.map(b => b.name).filter(n => !n.startsWith('workitem/') && !/^MRCDEV/i.test(n));
+  const names    = all.filter(n => n && !n.startsWith('workitem/') && !/^MRCDEV/i.test(n));
   const main     = ['master','main','development','production'].filter(n => names.includes(n));
   const releases = names.filter(n => n.startsWith('release/')).sort().reverse();
   const features = names.filter(n => n.startsWith('feature/'));
