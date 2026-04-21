@@ -431,13 +431,18 @@ async function fetchMergedPRs(repo, branch, from, to) {
   let all = [], page = 1, stop = false;
   while (!stop) {
     setStatus('run-status', 'Fetching Bitbucket PRs — page ' + page + '…');
-    const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/pullrequests?state=MERGED&pagelen=50&sort=-updated_on&page=${page}`;
+    // Sort by -merged_on so early-stop by date works correctly
+    const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/pullrequests?state=MERGED&pagelen=50&sort=-merged_on&page=${page}`;
     const data = await bbProxy(url);
     const prs = data.values || [];
     if (!prs.length) break;
     for (const pr of prs) {
-      const merged = new Date(pr.updated_on), dest = pr.destination?.branch?.name || '';
+      const mergedOn = pr.merged_on || pr.updated_on;
+      const merged = new Date(mergedOn);
+      const dest = pr.destination?.branch?.name || '';
+      // Stop paginating once PRs are older than our from-date
       if (merged < fromD) { stop = true; break; }
+      // Include if within date range and matches target branch
       if (merged <= toD && (!branch || dest === branch)) all.push(pr);
     }
     if (!data.next) break; page++;
