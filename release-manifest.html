@@ -127,11 +127,7 @@
   .copy-btn:hover{background:rgba(255,255,255,0.18);color:#fff;}
   .copy-btn.copied{background:rgba(0,168,107,0.3);border-color:rgba(0,168,107,0.5);color:#4cffb0;}
   .branch-item{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .branch-item:last-child{border-bottom:none;}
-  .branch-item:hover,.branch-item.selected{background:var(--re-blue-lt);color:var(--re-blue-dk);}
-  .branch-item.selected{font-weight:600;}
-  .branch-group-label{padding:5px 12px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);}
-  #bb-branch-search:focus{border-radius:var(--radius) var(--radius) 0 0;}
+
 </style>
 </head>
 <body>
@@ -202,12 +198,9 @@
           <option value="datawarehouse">datawarehouse</option>
         </select>
       </div>
-      <div class="field" style="position:relative;">
+      <div class="field">
         <label>Target Branch</label>
-        <input type="text" id="bb-branch-search" placeholder="— connect to load branches —" disabled autocomplete="off" oninput="filterBranches()" onfocus="showBranchList()" onblur="hideBranchList()" style="padding-right:32px;">
-        <input type="hidden" id="bb-branch" value="">
-        <div id="branch-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1.5px solid var(--re-blue);border-top:none;border-radius:0 0 var(--radius) var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(11,30,37,0.12);">
-        </div>
+        <input type="text" id="bb-branch" placeholder="e.g. release/3.19.04" disabled autocomplete="off">
       </div>
     </div>
     <div class="date-section">
@@ -341,25 +334,7 @@ async function proxyFetch(url, basicAuth, systemPrompt=null, maxTokens=8192) {
 }
 
 // Branch-specific proxy: returns ONLY {names: [...], next: "..."} to avoid truncation
-async function bbBranchProxy(url) {
-  const auth = 'Basic ' + b64(atlEmail + ':' + atlToken);
-  const system = `You are an HTTP proxy. Fetch the given URL with the given Authorization header. From the JSON response, extract: the "name" field and "target.date" field from each item in "values", and the "next" field at the top level. Return a compact JSON object like: {"branches":[{"name":"branch1","date":"2025-01-15T00:00:00+00:00"},{"name":"branch2","date":"2024-06-01T00:00:00+00:00"}],"next":"https://..."} — use null for next if not present. No other fields. No markdown. Include ALL items from values.`;
-  const resp = await fetch(PROXY, {
-    method: 'POST',
-    headers: proxyHeaders(),
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 8192,
-      system,
-      messages: [{ role: 'user', content: `GET ${url}\nAuthorization: ${auth}` }]
-    })
-  });
-  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error('Proxy ' + resp.status + ': ' + (e?.error?.message || JSON.stringify(e))); }
-  const data = await resp.json();
-  const raw = (data.content || []).map(b => b.text || '').join('').trim();
-  const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
-  return JSON.parse(clean);
-}
+
 
 function bbAuth()   { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
 function jiraAuth() { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
@@ -388,8 +363,7 @@ async function doConnect() {
     const me = await jiraProxy('/rest/api/3/myself');
     if (!me || !me.accountId) throw new Error('Invalid Jira credentials — check email and API token.');
 
-    setStatus('connect-status', 'Jira OK — loading Bitbucket branches…', 'info');
-    await loadBranches(document.getElementById('bb-repo').value);
+    setStatus('connect-status', 'Jira OK.', 'info');
 
     connected = true;
     setLocked(false);
@@ -431,79 +405,16 @@ function doReset() {
   setStatus('run-status', '', '');
 }
 
-// ── Branch loading ─────────────────────────────────────
-async function loadBranches(repo) {
-  const sel = document.getElementById('bb-branch');
-  sel.innerHTML = '<option>— loading… —</option>';
-
-  let all = [];
-  let url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/refs/branches?pagelen=100&sort=-target.date`;
-  let page = 1;
-  const cutoff = new Date('2025-01-01T00:00:00Z');
-  while (url) {
-    setStatus('connect-status', 'Loading branches — page ' + page + '…', 'info');
-    const data = await bbBranchProxy(url);
-    const branches = data.branches || [];
-    // Add branches updated since cutoff
-    const recent = branches.filter(b => b.date && new Date(b.date) >= cutoff);
-    all = all.concat(recent.map(b => b.name));
-    // Stop paginating if oldest branch on this page is before cutoff
-    const oldest = branches[branches.length - 1];
-    if (!oldest || (oldest.date && new Date(oldest.date) < cutoff)) break;
-    url = data.next || null;
-    page++;
-  }
-
-  const names    = all.filter(n => n && !n.startsWith('workitem/') && !/^MRCDEV/i.test(n));
-  const main     = ['master','main','development','production'].filter(n => names.includes(n));
-  const releases = names.filter(n => n.startsWith('release/')).sort().reverse();
-  const features = names.filter(n => n.startsWith('feature/'));
-  const others   = names.filter(n => !main.includes(n) && !n.startsWith('release/') && !n.startsWith('feature/'));
-
-  sel.innerHTML = '';
-  function addGroup(label, arr) {
-    if (!arr.length) return;
-    const og = document.createElement('optgroup'); og.label = label;
-    arr.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; og.appendChild(o); });
-    sel.appendChild(og);
-  }
-  addGroup('Main branches', main);
-  addGroup('Release branches', releases);
-  addGroup('Feature branches', features);
-  if (others.length) addGroup('Other', others);
-
-  if (sel.value) await fetchBranchDate(sel.value);
+// ── Branch validation ──────────────────────────────────
+async function validateBranch(branch, repo) {
+  const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/refs/branches/${encodeURIComponent(branch)}`;
+  const data = await bbProxy(url);
+  if (!data || !data.name) throw new Error('Branch not found');
+  return data;
 }
 
 async function onRepoChange() {
-  if (!connected) return;
-  setStatus('connect-status', 'Loading branches…', 'info');
-  try {
-    await loadBranches(document.getElementById('bb-repo').value);
-    setStatus('connect-status', 'Branches loaded.', 'success');
-  } catch(err) {
-    setStatus('connect-status', 'Branch load failed: ' + err.message, 'error');
-  }
-}
-
-async function onBranchChange() {
-  if (!connected) return;
-  const b = document.getElementById('bb-branch').value;
-  if (branchDateMap[b]) { setDateFrom(branchDateMap[b]); return; }
-  await fetchBranchDate(b);
-}
-
-async function fetchBranchDate(branch) {
-  const repo = document.getElementById('bb-repo').value;
-  try {
-    const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/commits?include=${encodeURIComponent(branch)}&pagelen=1&sort=date`;
-    const data = await bbProxy(url);
-    const date = (data.values || [])[0]?.date;
-    if (!date) return;
-    const s = date.substring(0, 10);
-    branchDateMap[branch] = s;
-    setDateFrom(s);
-  } catch(e) {}
+  // nothing to do — user types branch manually
 }
 
 function setDateFrom(s) {
@@ -609,7 +520,7 @@ function exportCSV() {
 async function runQuery() {
   if (!connected) { setStatus('run-status','⚠ Please connect first.','error'); return; }
   const repo   = document.getElementById('bb-repo').value;
-  const branch = document.getElementById('bb-branch').value;
+  const branch = document.getElementById('bb-branch').value.trim();
   const from   = document.getElementById('date-from').value;
   const to     = document.getElementById('date-to').value;
   const missing = [];
@@ -617,6 +528,15 @@ async function runQuery() {
   if (!to)     missing.push('To date');
   if (!branch) missing.push('Target Branch');
   if (missing.length) { setStatus('run-status','⚠ Please fill in: '+missing.join(', '),'error'); return; }
+
+  // Validate branch exists
+  setStatus('run-status', 'Validating branch "' + branch + '"…', 'info');
+  try {
+    await validateBranch(branch.trim(), repo);
+  } catch(e) {
+    setStatus('run-status', '⚠ Branch "' + branch + '" not found in ' + repo + '. Check the name and try again.', 'error');
+    btn.disabled = false; btn.innerHTML = runLabel(); return;
+  }
 
   const btn = document.getElementById('run-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running…';
