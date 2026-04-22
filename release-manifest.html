@@ -206,7 +206,7 @@
       <div class="field">
         <label>Target Branch</label>
         <div class="branch-wrap">
-          <input type="text" id="bb-branch-filter" class="branch-input" placeholder="— connect to load branches —" disabled autocomplete="off" oninput="filterBranches()" onfocus="openBranchDropdown()" onblur="scheduleBranchClose()">
+          <input type="text" id="bb-branch-filter" class="branch-input" placeholder="— connect to load branches —" disabled autocomplete="off" oninput="filterBranches()" onfocus="openBranchDropdown()" onblur="scheduleBranchClose()" onkeydown="if(event.key==='Enter'){document.getElementById('bb-branch').value=this.value.trim();document.getElementById('branch-dropdown').classList.remove('open');}">
           <input type="hidden" id="bb-branch" value="">
           <div id="branch-dropdown" class="branch-dropdown">
             <div class="branch-loading"><span class="spinner blue"></span> Loading branches…</div>
@@ -451,7 +451,8 @@ function extractKey(text) {
 async function runQuery() {
   const repos  = getSelectedRepos();
   if (!repos.length) { setStatus('run-status','⚠ Please select at least one repository.','error'); btn.disabled=false; btn.innerHTML=runLabel(); return; }
-  const branch = document.getElementById('bb-branch').value.trim() || document.getElementById('bb-branch-filter').value.trim();
+  // Use hidden value (selected from dropdown) OR whatever is typed in the filter box
+  const branch = (document.getElementById('bb-branch').value.trim() || document.getElementById('bb-branch-filter').value.trim());
   const from   = document.getElementById('date-from').value;
   const to     = document.getElementById('date-to').value;
   const missing = [];
@@ -682,6 +683,12 @@ function openBranchDropdown() {
 function scheduleBranchClose() {
   setTimeout(() => {
     document.getElementById('branch-dropdown').classList.remove('open');
+    // Commit whatever is typed into the hidden input if nothing was selected from dropdown
+    const filter = document.getElementById('bb-branch-filter');
+    const hidden = document.getElementById('bb-branch');
+    if (!hidden.value.trim() && filter.value.trim()) {
+      hidden.value = filter.value.trim();
+    }
   }, 150);
 }
 
