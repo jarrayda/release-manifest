@@ -98,6 +98,21 @@
   @keyframes spin{to{transform:rotate(360deg);}}
 
   @media(max-width:700px){.form-grid{grid-template-columns:1fr;}.date-inputs{grid-template-columns:1fr;}.date-arrow{display:none;}.page-title{font-size:22px;}}
+
+  /* Branch picker */
+  .branch-wrap{position:relative;}
+  .branch-input{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;cursor:pointer;}
+  .branch-input:focus{border-color:var(--re-blue);box-shadow:0 0 0 3px rgba(0,168,219,0.12);border-radius:var(--radius) var(--radius) 0 0;}
+  .branch-input::placeholder{color:var(--muted);}
+  .branch-input:disabled{opacity:.5;cursor:not-allowed;}
+  .branch-dropdown{display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1.5px solid var(--re-blue);border-top:none;border-radius:0 0 var(--radius) var(--radius);max-height:260px;overflow-y:auto;box-shadow:0 6px 20px rgba(11,30,37,0.15);}
+  .branch-dropdown.open{display:block;}
+  .branch-group{padding:5px 0 2px;}
+  .branch-group-label{padding:4px 12px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);}
+  .branch-item{padding:8px 12px;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .1s;}
+  .branch-item:hover,.branch-item.active{background:var(--re-blue-lt);color:var(--re-blue-dk);}
+  .branch-item mark{background:none;color:var(--re-blue);font-weight:700;}
+  .branch-loading{padding:10px 12px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;}
 </style>
 </head>
 <body>
@@ -173,7 +188,13 @@
       </div>
       <div class="field">
         <label>Target Branch</label>
-        <input type="text" id="bb-branch" placeholder="e.g. release/3.19.04" disabled autocomplete="off">
+        <div class="branch-wrap">
+          <input type="text" id="bb-branch-filter" class="branch-input" placeholder="— connect to load branches —" disabled autocomplete="off" oninput="filterBranches()" onfocus="openBranchDropdown()" onblur="scheduleBranchClose()">
+          <input type="hidden" id="bb-branch" value="">
+          <div id="branch-dropdown" class="branch-dropdown">
+            <div class="branch-loading"><span class="spinner blue"></span> Loading branches…</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="date-section">
@@ -252,7 +273,7 @@ function setStatus(id, msg, type='') {
 }
 function setLocked(locked) {
   document.getElementById('card-query').classList.toggle('locked', locked);
-  ['bb-repo','bb-branch','run-btn'].forEach(id => document.getElementById(id).disabled = locked);
+  ['bb-repo','bb-branch-filter','run-btn'].forEach(id => document.getElementById(id).disabled = locked);
 }
 
 // ── Real fetch via Cloudflare Worker ───────────────────
@@ -296,6 +317,8 @@ async function doConnect() {
     btn.style.display = 'none';
     document.getElementById('reset-link').style.display = 'inline';
     setStatus('connect-status','Connected as ' + me.displayName + ' (' + me.emailAddress + ')','success');
+    // Load branches in background
+    loadBranches(document.getElementById('bb-repo').value);
   } catch(err) {
     setStatus('connect-status','Error: ' + err.message,'error');
     atlEmail = ''; atlToken = '';
@@ -312,6 +335,12 @@ function doReset() {
   connected = false; atlEmail = ''; atlToken = '';
   ['atl-email','atl-token','bb-token'].forEach(id => { const el=document.getElementById(id); el.disabled=false; el.value=''; });
   bbToken = '';
+  allBranches = [];
+  document.getElementById('bb-branch').value = '';
+  document.getElementById('bb-branch-filter').value = '';
+  document.getElementById('bb-branch-filter').placeholder = '— connect to load branches —';
+  document.getElementById('branch-dropdown').innerHTML = '<div class="branch-loading"><span class="spinner blue"></span> Loading branches…</div>';
+  document.getElementById('branch-dropdown').classList.remove('open');
   const btn = document.getElementById('connect-btn');
   btn.style.display='inline-flex'; btn.disabled=false; btn.innerHTML=connectLabel();
   document.getElementById('reset-link').style.display='none';
@@ -400,7 +429,7 @@ function extractKey(text) {
 // ── Run ────────────────────────────────────────────────
 async function runQuery() {
   const repo   = document.getElementById('bb-repo').value;
-  const branch = document.getElementById('bb-branch').value.trim();
+  const branch = document.getElementById('bb-branch').value.trim() || document.getElementById('bb-branch-filter').value.trim();
   const from   = document.getElementById('date-from').value;
   const to     = document.getElementById('date-to').value;
   const missing = [];
@@ -449,6 +478,100 @@ async function runQuery() {
     console.error(err);
   }
   btn.disabled=false; btn.innerHTML=runLabel();
+}
+
+// ── Branch picker ─────────────────────────────────────
+let allBranches = [];
+
+async function loadBranches(repo) {
+  allBranches = [];
+  const filter = document.getElementById('bb-branch-filter');
+  const dd = document.getElementById('branch-dropdown');
+  filter.placeholder = '— loading branches… —';
+  dd.innerHTML = '<div class="branch-loading"><span class="spinner blue"></span> Loading…</div>';
+
+  try {
+    let url = 'https://api.bitbucket.org/2.0/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/refs/branches?pagelen=100&sort=-target.date';
+    const cutoff = new Date('2025-01-01T00:00:00Z');
+    let page = 1;
+    while (url) {
+      const data = await bbFetch(url.replace('https://api.bitbucket.org/2.0',''));
+      const values = data.values || [];
+      let hitCutoff = false;
+      for (const b of values) {
+        const d = b.target?.date ? new Date(b.target.date) : null;
+        if (d && d < cutoff) { hitCutoff = true; break; }
+        const name = b.name;
+        if (name && !name.startsWith('workitem/') && !/^MRCDEV/i.test(name)) {
+          allBranches.push(name);
+        }
+      }
+      if (hitCutoff || !data.next) break;
+      url = data.next;
+      page++;
+    }
+
+    filter.placeholder = 'Search branches… (' + allBranches.length + ' loaded)';
+    renderBranchDropdown('');
+  } catch(e) {
+    filter.placeholder = 'Error loading branches';
+    dd.innerHTML = '<div class="branch-loading" style="color:var(--danger)">Failed to load branches</div>';
+  }
+}
+
+function renderBranchDropdown(query) {
+  const dd = document.getElementById('branch-dropdown');
+  const q = query.toLowerCase().trim();
+  const filtered = q ? allBranches.filter(n => n.toLowerCase().includes(q)) : allBranches;
+
+  if (!filtered.length) {
+    dd.innerHTML = '<div class="branch-loading" style="color:var(--muted)">No branches match</div>';
+    return;
+  }
+
+  const main     = filtered.filter(n => ['master','main','development','production'].includes(n));
+  const releases = filtered.filter(n => n.startsWith('release/')).sort().reverse();
+  const features = filtered.filter(n => n.startsWith('feature/'));
+  const others   = filtered.filter(n => !main.includes(n) && !n.startsWith('release/') && !n.startsWith('feature/'));
+
+  function highlight(name) {
+    if (!q) return escHtml(name);
+    return escHtml(name).replace(new RegExp(escHtml(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<mark>'+m+'</mark>');
+  }
+  function group(label, items) {
+    if (!items.length) return '';
+    return '<div class="branch-group"><div class="branch-group-label">'+label+'</div>' +
+      items.map(n => '<div class="branch-item" onmousedown="selectBranch(''+n.replace(/'/g,"\'")+'')">' + highlight(n) + '</div>').join('') +
+      '</div>';
+  }
+
+  dd.innerHTML = group('Main', main) + group('Release', releases) + group('Feature', features) + (others.length ? group('Other', others) : '');
+}
+
+function filterBranches() {
+  const q = document.getElementById('bb-branch-filter').value;
+  document.getElementById('bb-branch').value = '';  // clear selection when typing
+  renderBranchDropdown(q);
+  openBranchDropdown();
+}
+
+function openBranchDropdown() {
+  if (!allBranches.length) return;
+  const dd = document.getElementById('branch-dropdown');
+  renderBranchDropdown(document.getElementById('bb-branch-filter').value);
+  dd.classList.add('open');
+}
+
+function scheduleBranchClose() {
+  setTimeout(() => {
+    document.getElementById('branch-dropdown').classList.remove('open');
+  }, 150);
+}
+
+function selectBranch(name) {
+  document.getElementById('bb-branch').value = name;
+  document.getElementById('bb-branch-filter').value = name;
+  document.getElementById('branch-dropdown').classList.remove('open');
 }
 
 function runLabel() {
