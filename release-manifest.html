@@ -536,12 +536,13 @@ function renderBranchDropdown(query) {
 
   function highlight(name) {
     if (!q) return escHtml(name);
-    return escHtml(name).replace(new RegExp(escHtml(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<mark>'+m+'</mark>');
+    const safe = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escHtml(name).replace(new RegExp(safe, 'gi'), m => '<mark>'+m+'</mark>');
   }
   function group(label, items) {
     if (!items.length) return '';
     return '<div class="branch-group"><div class="branch-group-label">'+label+'</div>' +
-      items.map(n => '<div class="branch-item" onmousedown="selectBranch(''+n.replace(/'/g,"\'")+'')">' + highlight(n) + '</div>').join('') +
+      items.map(n => '<div class="branch-item" onmousedown="selectBranch(this)" data-branch="'+escHtml(n)+'">' + highlight(n) + '</div>').join('') +
       '</div>';
   }
 
@@ -568,7 +569,8 @@ function scheduleBranchClose() {
   }, 150);
 }
 
-function selectBranch(name) {
+function selectBranch(el) {
+  const name = el.dataset.branch;
   document.getElementById('bb-branch').value = name;
   document.getElementById('bb-branch-filter').value = name;
   document.getElementById('branch-dropdown').classList.remove('open');
