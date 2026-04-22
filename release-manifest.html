@@ -149,7 +149,7 @@
   </div>
 </div>
 <div class="page">
-  <h1 class="page-title">Release <span>Manifest</span> <span style="font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0;vertical-align:middle;margin-left:6px;">v1.3</span></h1>
+  <h1 class="page-title">Release <span>Manifest</span> <span style="font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0;vertical-align:middle;margin-left:6px;">v1.4</span></h1>
   <p class="page-sub">Generate a list of Jira work items merged into a branch between two dates</p>
 
   <div class="card" id="card-connect">
@@ -637,10 +637,28 @@ document.addEventListener('click', e => {
 // ── Branch picker ─────────────────────────────────────
 let allBranches = [];
 
-async function fetchBranchesForRepo(repo) {
-  // Returns Set of branch names (no date - we don't use target.date)
+function buildBranchTypeQuery(types) {
+  // Build Bitbucket q= filter from selected branch types
+  const MAIN = ['master','main','development','production'];
+  const parts = [];
+  if (types.includes('release')) parts.push('name ~ "release/"');
+  if (types.includes('feature')) parts.push('name ~ "feature/"');
+  if (types.includes('main'))    MAIN.forEach(m => parts.push('name = "' + m + '"'));
+  if (types.includes('other'))   return null; // can't easily filter "other" — fetch all and filter client-side
+  if (!parts.length) return ''; // nothing selected
+  return parts.join(' OR ');
+}
+
+async function fetchBranchesForRepo(repo, types) {
   const branches = new Set();
-  let url = 'https://api.bitbucket.org/2.0/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/refs/branches?pagelen=100&sort=-target.date';
+  const qFilter = buildBranchTypeQuery(types);
+  if (qFilter === '') return branches; // nothing selected
+
+  // If "other" is selected we can't use q= filter server-side, fetch all and filter client-side
+  const fetchAll = types.includes('other');
+  const baseUrl = 'https://api.bitbucket.org/2.0/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/refs/branches?pagelen=100&sort=-target.date';
+  let url = qFilter && !fetchAll ? baseUrl + '&q=' + encodeURIComponent(qFilter) : baseUrl;
+
   const cutoff = new Date('2025-01-01T00:00:00Z');
   while (url) {
     const data = await bbFetch(url.replace('https://api.bitbucket.org/2.0','')).catch(() => ({}));
@@ -650,7 +668,11 @@ async function fetchBranchesForRepo(repo) {
       const d = b.target?.date ? new Date(b.target.date) : null;
       if (d && d < cutoff) { hitCutoff = true; break; }
       const name = b.name;
-      if (name && !name.startsWith('workitem/') && !/^MRCDEV/i.test(name)) {
+      if (!name || name.startsWith('workitem/') || /^MRCDEV/i.test(name)) continue;
+      // Client-side type filter (needed when fetching all for "other")
+      if (fetchAll) {
+        if (branchMatchesTypes(name, types)) branches.add(name);
+      } else {
         branches.add(name);
       }
     }
@@ -688,9 +710,10 @@ async function loadBranchesFromAll(repos) {
   dd.innerHTML = '<div class="branch-loading"><span class="spinner blue"></span> Loading branches from ' + repos.length + ' repo' + (repos.length !== 1 ? 's' : '') + '…</div>';
 
   try {
+    const types = getSelectedBranchTypes();
     // Fetch branch names and recent PR activity in parallel for all repos
     const [branchResults, prDateResults] = await Promise.all([
-      Promise.all(repos.map(r => fetchBranchesForRepo(r))),
+      Promise.all(repos.map(r => fetchBranchesForRepo(r, types))),
       Promise.all(repos.map(r => fetchRecentPRBranchDates(r)))
     ]);
 
@@ -755,7 +778,11 @@ function updateBranchTypeTriggerLabel() {
 
 function onBranchTypeChange() {
   updateBranchTypeTriggerLabel();
-  renderBranchDropdown(document.getElementById('bb-branch-filter').value);
+  // Re-fetch branches from API using new type filters
+  if (connected) {
+    const repos = getSelectedRepos();
+    if (repos.length) loadBranchesFromAll(repos);
+  }
 }
 
 function toggleBranchTypeDropdown() {
@@ -788,9 +815,8 @@ document.addEventListener('click', e => {
 function renderBranchDropdown(query) {
   const dd = document.getElementById('branch-dropdown');
   const q = query.toLowerCase().trim();
-  const types = getSelectedBranchTypes();
-  const typeFiltered = allBranches.filter(n => branchMatchesTypes(n, types));
-  const filtered = q ? typeFiltered.filter(n => n.toLowerCase().includes(q)) : typeFiltered;
+  // Branches are already filtered by type at fetch time — just apply search query
+  const filtered = q ? allBranches.filter(n => n.toLowerCase().includes(q)) : allBranches;
 
   if (!filtered.length) {
     dd.innerHTML = '<div class="branch-loading" style="color:var(--muted)">No branches match</div>';
