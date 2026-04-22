@@ -122,7 +122,7 @@
   <div class="topbar-sub">Product Tools</div>
 </div>
 <div class="page">
-  <h1 class="page-title">Release <span>Manifest</span> <span style="font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0;vertical-align:middle;margin-left:6px;">v1.0</span></h1>
+  <h1 class="page-title">Release <span>Manifest</span> <span style="font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0;vertical-align:middle;margin-left:6px;">v1.1</span></h1>
   <p class="page-sub">Generate a list of Jira work items merged into a branch between two dates</p>
 
   <div class="card" id="card-connect">
@@ -223,9 +223,9 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export CSV
       </button>
-      <button class="export-btn" id="copy-query-btn" onclick="copyJQL()" style="display:none;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Copy Query
+      <button class="export-btn" id="open-jira-btn" onclick="openInJira()" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Open in Jira
       </button>
     </div>
     <div class="status-bar" id="run-status"></div>
@@ -348,7 +348,7 @@ function doReset() {
   setStatus('connect-status','',''); setLocked(true);
   document.getElementById('results-section').classList.remove('visible');
   document.getElementById('export-btn').style.display='none';
-  document.getElementById('copy-query-btn').style.display='none';
+  document.getElementById('open-jira-btn').style.display='none';
   setStatus('run-status','','');
 }
 
@@ -442,7 +442,7 @@ async function runQuery() {
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Running…';
   document.getElementById('results-section').classList.remove('visible');
   document.getElementById('export-btn').style.display='none';
-  document.getElementById('copy-query-btn').style.display='none';
+  document.getElementById('open-jira-btn').style.display='none';
 
   try {
     const prs = await fetchMergedPRs(repo, branch, from, to);
@@ -644,17 +644,12 @@ function exportCSV() {
 // ── JQL ────────────────────────────────────────────────
 function updateJQL(keys) {
   window._currentJQL = 'issueKey in ('+keys.join(', ')+') ORDER BY issueKey ASC';
-  document.getElementById('copy-query-btn').style.display = 'inline-flex';
+  document.getElementById('open-jira-btn').style.display = 'inline-flex';
 }
-function copyJQL() {
+function openInJira() {
   const jql = window._currentJQL || '';
-  navigator.clipboard.writeText(jql).then(()=>{
-    const btn = document.getElementById('copy-query-btn');
-    const orig = btn.innerHTML;
-    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
-    btn.style.borderColor='var(--success)'; btn.style.color='var(--success)';
-    setTimeout(()=>{ btn.innerHTML=orig; btn.style.borderColor=''; btn.style.color=''; },2500);
-  });
+  const url = JIRA_URL + '/issues/?jql=' + encodeURIComponent(jql);
+  window.open(url, '_blank');
 }
 </script>
 </body>
