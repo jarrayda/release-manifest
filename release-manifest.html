@@ -458,7 +458,7 @@ async function runQuery() {
       const key = extractKey(pr.title) || extractKey(pr.source?.branch?.name||'');
       if (key) {
         if (!keyMap[key]) keyMap[key] = {prCount:0, mergedOn: pr.updated_on};
-        else keyMap[key].prCount++;
+        keyMap[key].prCount++;
       }
     }
     const keys = Object.keys(keyMap);
