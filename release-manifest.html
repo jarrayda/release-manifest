@@ -651,33 +651,33 @@ function buildBranchTypeQuery(types) {
 
 async function fetchBranchesForRepo(repo, types) {
   const branches = new Set();
-  const qFilter = buildBranchTypeQuery(types);
-  if (qFilter === '') return branches; // nothing selected
-
-  // If "other" is selected we can't use q= filter server-side, fetch all and filter client-side
-  const fetchAll = types.includes('other');
-  const baseUrl = 'https://api.bitbucket.org/2.0/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/refs/branches?pagelen=100&sort=-target.date';
-  let url = qFilter && !fetchAll ? baseUrl + '&q=' + encodeURIComponent(qFilter) : baseUrl;
+  if (!types || !types.length) return branches;
 
   const cutoff = new Date('2025-01-01T00:00:00Z');
-  while (url) {
-    const data = await bbFetch(url.replace('https://api.bitbucket.org/2.0','')).catch(() => ({}));
+  const fetchAll = types.includes('other');
+  const qFilter = buildBranchTypeQuery(types);
+  if (qFilter === '') return branches;
+
+  // Build base path — always use page= param for pagination to preserve q= filter
+  const basePath = '/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/refs/branches?pagelen=100&sort=-target.date' + ((!fetchAll && qFilter) ? '&q=' + encodeURIComponent(qFilter) : '');
+  let page = 1;
+
+  while (true) {
+    const path = basePath + '&page=' + page;
+    const data = await bbFetch(path).catch(() => ({}));
     const values = data.values || [];
+    if (!values.length) break;
     let hitCutoff = false;
     for (const b of values) {
       const d = b.target?.date ? new Date(b.target.date) : null;
       if (d && d < cutoff) { hitCutoff = true; break; }
       const name = b.name;
       if (!name || name.startsWith('workitem/') || /^MRCDEV/i.test(name)) continue;
-      // Client-side type filter (needed when fetching all for "other")
-      if (fetchAll) {
-        if (branchMatchesTypes(name, types)) branches.add(name);
-      } else {
-        branches.add(name);
-      }
+      // Always apply client-side type check as a safety net
+      if (branchMatchesTypes(name, types)) branches.add(name);
     }
     if (hitCutoff || !data.next) break;
-    url = data.next;
+    page++;
   }
   return branches;
 }
