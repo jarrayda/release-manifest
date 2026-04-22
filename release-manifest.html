@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Manifest — Retail Express</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --re-blue:#00A8DB; --re-blue-dk:#0087b3; --re-blue-lt:#e6f7fc;
+    --re-pink:#E8175D; --re-pink-lt:#fde8ef;
+    --re-navy:#0B1E25;
+    --bg:#f0f4f6; --surface:#ffffff; --surface2:#f7f9fa;
+    --border:#dde3e7; --text:#0B1E25; --text-mid:#3d5260; --muted:#7a909e;
+    --success:#00a86b; --danger:#E8175D;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px;}
+
+  .topbar{background:var(--re-navy);padding:0 32px;display:flex;align-items:center;height:56px;gap:12px;}
+  .topbar-logo{font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.03em;}
+  .topbar-logo span{color:var(--re-blue);}
+  .topbar-div{width:1px;height:20px;background:rgba(255,255,255,0.2);}
+  .topbar-sub{font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:0.06em;text-transform:uppercase;}
+
+  .page{max-width:960px;margin:0 auto;padding:32px 24px 80px;}
+  .page-title{font-size:26px;font-weight:800;color:var(--re-navy);letter-spacing:-0.03em;margin-bottom:4px;}
+  .page-title span{color:var(--re-blue);}
+  .page-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(11,30,37,0.06);transition:opacity .2s;}
+  .card.locked{opacity:.45;pointer-events:none;user-select:none;}
+  .card-title{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .step-badge{width:20px;height:20px;border-radius:50%;background:var(--re-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .card.locked .step-badge{background:var(--border);color:var(--muted);}
+  .connected-badge{display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--success);margin-left:auto;}
+  .connected-badge.visible{display:flex;}
+  .connected-badge svg{width:13px;height:13px;}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:12px;font-weight:600;color:var(--text-mid);}
+  .field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;}
+  .field input:focus,.field select:focus{border-color:var(--re-blue);box-shadow:0 0 0 3px rgba(0,168,219,0.12);}
+  .field input::placeholder{color:var(--muted);}
+  .field select{cursor:pointer;}
+  .field select:disabled{opacity:.5;cursor:not-allowed;}
+
+  .date-section{background:var(--re-blue-lt);border:2px solid var(--re-blue);border-radius:12px;padding:20px 22px;margin-bottom:16px;}
+  .date-section-label{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--re-blue-dk);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+  .date-inputs{display:grid;grid-template-columns:1fr 36px 1fr;gap:10px;align-items:center;}
+  .date-arrow{text-align:center;color:var(--re-blue);font-size:22px;font-weight:300;}
+  .date-field{display:flex;flex-direction:column;gap:5px;}
+  .date-field label{font-size:12px;font-weight:600;color:var(--re-blue-dk);}
+  .date-field input[type=date]{background:#fff;border:2px solid var(--re-blue);border-radius:9px;padding:11px 14px;color:var(--re-navy);font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;cursor:pointer;}
+  .date-field input[type=date]:focus{border-color:var(--re-blue-dk);box-shadow:0 0 0 3px rgba(0,168,219,0.2);}
+  .date-hint{font-size:11px;font-weight:600;color:var(--success);display:none;margin-top:3px;}
+
+  .help-text{font-size:12px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:10px 14px;border-left:3px solid var(--re-blue);line-height:1.6;margin-bottom:16px;}
+  .help-text a{color:var(--re-blue);text-decoration:none;}
+  .help-text a:hover{text-decoration:underline;}
+  .help-text strong{color:var(--text-mid);}
+
+  .btn-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .connect-btn{display:inline-flex;align-items:center;gap:8px;background:var(--re-blue);color:#fff;border:none;border-radius:var(--radius);padding:11px 24px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s,transform .1s,box-shadow .15s;box-shadow:0 2px 8px rgba(0,168,219,0.3);}
+  .connect-btn:hover{background:var(--re-blue-dk);transform:translateY(-1px);}
+  .connect-btn:active{transform:translateY(0);}
+  .connect-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+  .connect-btn svg{width:15px;height:15px;}
+
+  .run-btn{display:inline-flex;align-items:center;gap:8px;background:var(--re-pink);color:#fff;border:none;border-radius:var(--radius);padding:12px 28px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s,transform .1s,box-shadow .15s;box-shadow:0 2px 10px rgba(232,23,93,0.35);}
+  .run-btn:hover{background:#c9134f;transform:translateY(-1px);box-shadow:0 4px 16px rgba(232,23,93,0.4);}
+  .run-btn:active{transform:translateY(0);}
+  .run-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+  .run-btn svg{width:15px;height:15px;}
+
+  .export-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text-mid);border-radius:var(--radius);padding:10px 18px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s;}
+  .export-btn:hover{border-color:var(--re-blue);color:var(--re-blue);}
+
+  .reset-link{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit;padding:0;}
+  .reset-link:hover{color:var(--danger);}
+
+  .status-bar{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:14px;display:none;line-height:1.5;}
+  .status-bar.visible{display:block;}
+  .status-bar.error{color:var(--danger);background:var(--re-pink-lt);border-color:rgba(232,23,93,0.3);}
+  .status-bar.success{color:var(--success);background:#edfaf4;border-color:rgba(0,168,107,0.3);}
+  .status-bar.info{color:var(--re-blue-dk);background:var(--re-blue-lt);border-color:rgba(0,168,219,0.3);}
+
+  .results-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;}
+  .results-title{font-size:18px;font-weight:800;color:var(--re-navy);}
+  .results-meta{font-size:12px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+  .summary-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text-mid);}
+  .chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;overflow-x:auto;box-shadow:0 1px 4px rgba(11,30,37,0.05);}
+  .issue-table{width:100%;border-collapse:collapse;}
+  .issue-table thead{background:var(--re-navy);}
+  .issue-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.65);padding:11px 14px;}
+  .issue-table td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .issue-table tr:last-child td{border-bottom:none;}
+  .issue-table tbody tr:hover{background:var(--re-blue-lt);}
+  .issue-key{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--re-blue);white-space:nowrap;text-decoration:none;}
+  .issue-key:hover{text-decoration:underline;color:var(--re-blue-dk);}
+  .issue-summary{font-size:13px;font-weight:500;line-height:1.4;max-width:400px;}
+  .type-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;white-space:nowrap;}
+  .status-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .assignee-cell{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:13px;}
+  .avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--re-blue),var(--re-navy));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .pr-count{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--muted);}
+
+  .results-section{display:none;}
+  .results-section.visible{display:block;}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+  .spinner.blue{border-color:rgba(0,168,219,0.25);border-top-color:var(--re-blue);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media(max-width:700px){.form-grid{grid-template-columns:1fr;}.form-grid-3{grid-template-columns:1fr;}.date-inputs{grid-template-columns:1fr;}.date-arrow{display:none;}.page-title{font-size:22px;}}
+
+  .jql-panel{background:var(--re-navy);border-radius:12px;padding:20px 22px;margin-bottom:20px;}
+  .jql-panel-label{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+  .jql-text{font-family:'JetBrains Mono',monospace;font-size:13px;color:#e8ecf5;line-height:1.6;word-break:break-all;user-select:all;}
+  .copy-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;}
+  .copy-btn:hover{background:rgba(255,255,255,0.18);color:#fff;}
+  .copy-btn.copied{background:rgba(0,168,107,0.3);border-color:rgba(0,168,107,0.5);color:#4cffb0;}
+  .branch-item{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">Retail<span>Express</span></div>
+  <div class="topbar-div"></div>
+  <div class="topbar-sub">Dev Tooling</div>
+</div>
+
+<div class="page">
+  <h1 class="page-title">Release <span>Manifest</span></h1>
+  <p class="page-sub">Generate a list of Jira work items merged into a branch between two dates</p>
+
+  <div class="card" id="card-connect">
+    <div class="card-title">
+      <span class="step-badge">1</span>
+      Connect
+      <span class="connected-badge" id="connected-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        Connected
+      </span>
+    </div>
+    <div class="form-grid-3" style="margin-bottom:10px;">
+      <div class="field">
+        <label>Anthropic API Key</label>
+        <input type="password" id="anth-key" placeholder="sk-ant-..." autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Atlassian Email</label>
+        <input type="text" id="atl-email" placeholder="your@email.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Atlassian API Token</label>
+        <input type="password" id="atl-token" placeholder="API token" autocomplete="off">
+      </div>
+    </div>
+    <div class="help-text">
+      <strong>Anthropic API key:</strong> Used to proxy Jira &amp; Bitbucket calls server-side (bypasses CORS). Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>.<br>
+      <strong>Atlassian token:</strong> Create a scoped Bitbucket token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">id.atlassian.com → Security → API tokens</a> — select <em>Bitbucket</em> as the app, with <em>Repositories: Read</em> and <em>Pull requests: Read</em>. Same token works for Jira.
+    </div>
+    <div class="btn-row">
+      <button class="connect-btn" id="connect-btn" onclick="doConnect()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Connect
+      </button>
+      <button class="reset-link" id="reset-link" onclick="doReset()" style="display:none;">Disconnect</button>
+    </div>
+    <div class="status-bar" id="connect-status"></div>
+  </div>
+
+  <div class="card locked" id="card-query">
+    <div class="card-title">
+      <span class="step-badge">2</span>
+      Query
+    </div>
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="field">
+        <label>Repository</label>
+        <select id="bb-repo" onchange="onRepoChange()" disabled>
+          <option value="core" selected>core</option>
+          <option value="coreapi">coreapi</option>
+          <option value="coreui">coreui</option>
+          <option value="rex">rex</option>
+          <option value="coreqa">coreqa</option>
+          <option value="shopify-service">shopify-service</option>
+          <option value="packages">packages</option>
+          <option value="datawarehouse">datawarehouse</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Target Branch</label>
+        <input type="text" id="bb-branch" placeholder="e.g. release/3.19.04" disabled autocomplete="off">
+      </div>
+    </div>
+    <div class="date-section">
+      <div class="date-section-label">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Date Range — PRs merged between these dates
+      </div>
+      <div class="date-inputs">
+        <div class="date-field">
+          <label>From (inclusive)</label>
+          <input type="date" id="date-from">
+          <span class="date-hint" id="date-from-hint">↑ auto-set from branch creation date</span>
+        </div>
+        <div class="date-arrow">&#8594;</div>
+        <div class="date-field">
+          <label>To (inclusive)</label>
+          <input type="date" id="date-to">
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="run-btn" id="run-btn" onclick="runQuery()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Generate Manifest
+      </button>
+      <button class="export-btn" id="export-btn" onclick="exportCSV()" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+    <div class="status-bar" id="run-status"></div>
+  </div>
+
+  <div class="results-section" id="results-section">
+    <div class="jql-panel">
+      <div class="jql-panel-label">
+        JQL — paste into Jira to get the same list
+        <button class="copy-btn" id="copy-btn" onclick="copyJQL()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+      <div class="jql-text" id="jql-text"></div>
+    </div>
+    <div class="results-header">
+      <div>
+        <div class="results-title">Release Items</div>
+        <div class="results-meta" id="results-meta"></div>
+      </div>
+    </div>
+    <div class="summary-row" id="summary-row"></div>
+    <div class="table-wrap">
+      <table class="issue-table">
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status</th><th>Assignee</th><th style="text-align:center">PRs</th></tr></thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const JIRA_URL     = 'https://maropost.atlassian.net';
+const BB_WORKSPACE = 'maropost-retail-cloud';
+const PROXY        = 'https://api.anthropic.com/v1/messages';
+const MODEL        = 'claude-haiku-4-5-20251001';
+
+let anthKey  = '';
+let atlEmail = '';
+let atlToken = '';
+let connected = false;
+const branchDateMap = {};
+
+// ── Default dates ──────────────────────────────────────
+(function initDates() {
+  const now   = new Date();
+  const today = now.toISOString().substring(0, 10);
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().substring(0, 10);
+  document.getElementById('date-to').value   = today;
+  document.getElementById('date-from').value = firstOfMonth;
+})();
+
+// ── Helpers ────────────────────────────────────────────
+function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function setStatus(id, msg, type='') {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status-bar' + (msg?' visible':'') + (type?' '+type:'');
+}
+function setLocked(locked) {
+  document.getElementById('card-query').classList.toggle('locked', locked);
+  document.getElementById('bb-repo').disabled = locked;
+  document.getElementById('bb-branch').disabled = locked;
+  document.getElementById('run-btn').disabled = locked;
+}
+
+// ── Anthropic proxy headers ────────────────────────────
+function proxyHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-api-key': anthKey,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true'
+  };
+}
+
+// ── Generic proxy call ─────────────────────────────────
+// Asks Claude (server-side) to fetch a URL with Basic auth and return raw JSON.
+async function proxyFetch(url, basicAuth, systemPrompt=null, maxTokens=8192) {
+  const sysPrompt = systemPrompt || 'You are an HTTP proxy. The user gives you a URL and an Authorization header value. Fetch that URL server-side using that Authorization header plus Accept: application/json. Return ONLY the raw JSON response body — no commentary, no markdown fences, no explanation. Just the JSON.';
+  const resp = await fetch(PROXY, {
+    method: 'POST',
+    headers: proxyHeaders(),
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system: sysPrompt,
+      messages: [{ role: 'user', content: `GET ${url}\nAuthorization: ${basicAuth}` }]
+    })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error('Proxy ' + resp.status + ': ' + (e?.error?.message || JSON.stringify(e))); }
+  const data = await resp.json();
+  const raw = (data.content || []).map(b => b.text || '').join('').trim();
+  const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
+  try {
+    return JSON.parse(clean);
+  } catch(e) {
+    throw new Error('Proxy returned non-JSON: ' + clean.slice(0, 300));
+  }
+}
+
+// Branch-specific proxy: returns ONLY {names: [...], next: "..."} to avoid truncation
+
+
+function bbAuth()   { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
+function jiraAuth() { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
+
+async function bbProxy(url)        { return proxyFetch(url, bbAuth()); }
+async function jiraProxy(path)     { return proxyFetch(JIRA_URL + path, jiraAuth()); }
+
+// ── Step 1: Connect ────────────────────────────────────
+async function doConnect() {
+  const key   = document.getElementById('anth-key').value.trim();
+  const email = document.getElementById('atl-email').value.trim();
+  const token = document.getElementById('atl-token').value.trim();
+  if (!key || !email || !token) {
+    setStatus('connect-status', '⚠ Please fill in all three fields.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('connect-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner blue"></span> Connecting…';
+  setStatus('connect-status', 'Verifying Jira credentials…', 'info');
+
+  anthKey = key; atlEmail = email; atlToken = token;
+
+  try {
+    const me = await jiraProxy('/rest/api/3/myself');
+    if (!me || !me.accountId) throw new Error('Invalid Jira credentials — check email and API token.');
+
+    setStatus('connect-status', 'Jira OK.', 'info');
+
+    connected = true;
+    setLocked(false);
+    document.getElementById('connected-badge').classList.add('visible');
+    document.getElementById('anth-key').disabled  = true;
+    document.getElementById('atl-email').disabled = true;
+    document.getElementById('atl-token').disabled = true;
+    btn.style.display = 'none';
+    document.getElementById('reset-link').style.display = 'inline';
+    setStatus('connect-status', 'Connected as ' + me.displayName + ' (' + me.emailAddress + ')', 'success');
+
+  } catch(err) {
+    setStatus('connect-status', 'Error: ' + err.message, 'error');
+    anthKey = ''; atlEmail = ''; atlToken = '';
+    btn.disabled = false;
+    btn.innerHTML = connectLabel();
+  }
+}
+
+function connectLabel() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Connect';
+}
+
+function doReset() {
+  connected = false; anthKey = ''; atlEmail = ''; atlToken = '';
+  ['anth-key','atl-email','atl-token'].forEach(id => {
+    const el = document.getElementById(id);
+    el.disabled = false;
+    if (id !== 'atl-email') el.value = '';
+  });
+  const btn = document.getElementById('connect-btn');
+  btn.style.display = 'inline-flex'; btn.disabled = false; btn.innerHTML = connectLabel();
+  document.getElementById('reset-link').style.display = 'none';
+  document.getElementById('connected-badge').classList.remove('visible');
+  setStatus('connect-status', '', '');
+  setLocked(true);
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('export-btn').style.display = 'none';
+  setStatus('run-status', '', '');
+}
+
+// ── Branch validation ──────────────────────────────────
+async function validateBranch(branch, repo) {
+  const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/refs/branches/${encodeURIComponent(branch)}`;
+  const data = await bbProxy(url);
+  if (!data || !data.name) throw new Error('Branch not found');
+  return data;
+}
+
+async function onRepoChange() {
+  // nothing to do — user types branch manually
+}
+
+function setDateFrom(s) {
+  document.getElementById('date-from').value = s;
+  const hint = document.getElementById('date-from-hint');
+  hint.style.display = 'block';
+  clearTimeout(window._ht);
+  window._ht = setTimeout(() => { hint.style.display = 'none'; }, 5000);
+}
+
+// ── PR proxy — extracts only needed fields to avoid truncation ─
+async function bbPRProxy(url) {
+  const auth = 'Basic ' + b64(atlEmail + ':' + atlToken);
+  const system = `You are an HTTP proxy. Fetch the given URL with the given Authorization header. From the JSON response extract ONLY these fields from each item in "values": id, title, merged_on, updated_on, destination.branch.name, source.branch.name. Also extract the top-level "next" field. Return compact JSON: {"prs":[{"id":1,"title":"...","merged_on":"...","updated_on":"...","dest":"...","src":"..."}],"next":"...or null"}. Include ALL items. No markdown.`;
+  const resp = await fetch(PROXY, {
+    method: 'POST',
+    headers: proxyHeaders(),
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 8192,
+      system,
+      messages: [{ role: 'user', content: 'GET ' + url + '\nAuthorization: ' + auth }]
+    })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error('Proxy ' + resp.status + ': ' + (e?.error?.message||JSON.stringify(e))); }
+  const data = await resp.json();
+  const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
+  const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
+  return JSON.parse(clean);
+}
+
+// ── Fetch merged PRs ───────────────────────────────────
+async function fetchMergedPRs(repo, branch, from, to) {
+  const fromD = new Date(from + 'T00:00:00Z'), toD = new Date(to + 'T23:59:59Z');
+  let all = [], page = 1;
+  // Use q= to filter by destination branch server-side — far fewer results, no truncation risk
+  const q = encodeURIComponent('state="MERGED"' + (branch ? ` AND destination.branch.name="${branch}"` : ''));
+  while (true) {
+    setStatus('run-status', 'Fetching Bitbucket PRs — page ' + page + '…');
+    const url = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(BB_WORKSPACE)}/${encodeURIComponent(repo)}/pullrequests?q=${q}&sort=-updated_on&pagelen=50&page=${page}`;
+    const data = await bbPRProxy(url);
+    const prs = data.prs || [];
+    if (!prs.length) break;
+    for (const pr of prs) {
+      const merged = new Date(pr.updated_on || pr.merged_on);
+      if (merged < fromD) { return all; }
+      if (merged <= toD) all.push(pr);
+    }
+    if (!data.next) break; page++;
+  }
+  return all;
+}
+
+// ── Fetch Jira issues ──────────────────────────────────
+async function fetchJiraIssues(keys) {
+  const issues = {};
+  const chunks = [];
+  for (let i = 0; i < keys.length; i += 50) chunks.push(keys.slice(i, i + 50));
+  for (let i = 0; i < chunks.length; i++) {
+    setStatus('run-status', 'Fetching Jira issues — batch ' + (i+1) + '/' + chunks.length + '…');
+    const jql  = 'issueKey in (' + chunks[i].join(',') + ')';
+    const path = '/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&fields=summary,status,issuetype,assignee&maxResults=100';
+    const data = await jiraProxy(path);
+    for (const issue of (data.issues || [])) issues[issue.key] = issue;
+  }
+  return issues;
+}
+
+function extractKey(text) { const m = String(text).match(/([A-Z][A-Z0-9]+-\d+)/); return m ? m[1] : null; }
+
+// ── Render ─────────────────────────────────────────────
+const TYPE_C = {Bug:{bg:'#fde8ef',c:'#c0134a',i:'🐛'},Story:{bg:'#e6f7fc',c:'#0087b3',i:'📖'},Task:{bg:'#eaf6ff',c:'#0073b7',i:'✓'},'Sub-task':{bg:'#f0ebff',c:'#6b3ec4',i:'↳'},Epic:{bg:'#fff8e6',c:'#b07800',i:'⚡'},Improvement:{bg:'#e6faf0',c:'#007a4d',i:'↑'},'New Feature':{bg:'#e6f7fc',c:'#0087b3',i:'✨'}};
+const STAT_C = {Done:{bg:'#e6faf0',c:'#007a4d'},'In Progress':{bg:'#fff8e6',c:'#b07800'},'To Do':{bg:'#f0f4f6',c:'#5a7080'},'In Review':{bg:'#e6f7fc',c:'#0087b3'},Closed:{bg:'#e6faf0',c:'#007a4d'},Resolved:{bg:'#e6faf0',c:'#007a4d'}};
+
+function typeBadge(n)   { const t=TYPE_C[n]||{bg:'#f0f4f6',c:'#5a7080',i:'·'}; return `<span class="type-badge" style="background:${t.bg};color:${t.c}">${t.i} ${escHtml(n||'Unknown')}</span>`; }
+function statusBadge(n) { const s=STAT_C[n]||{bg:'#f0f4f6',c:'#5a7080'}; return `<span class="status-badge" style="background:${s.bg};color:${s.c}">${escHtml(n||'—')}</span>`; }
+function initials(name) { return String(name||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2); }
+
+let currentData = [];
+function renderResults(rows, from, to, branch) {
+  document.getElementById('results-meta').textContent = 'Branch: ' + branch + '  ·  ' + from + ' → ' + to + '  ·  ' + rows.length + ' item' + (rows.length!==1?'s':'');
+  const byStatus={}, byType={};
+  for (const r of rows) {
+    const s = r.issue?.fields?.status?.name || 'Unknown';
+    const t = r.issue?.fields?.issuetype?.name || 'Unknown';
+    byStatus[s]=(byStatus[s]||0)+1; byType[t]=(byType[t]||0)+1;
+  }
+  const dots = {Done:'#00a86b','In Progress':'#f59e0b','To Do':'#7a909e',Closed:'#00a86b',Resolved:'#00a86b'};
+  document.getElementById('summary-row').innerHTML =
+    Object.entries(byStatus).map(([k,v]) => `<div class="chip"><span class="chip-dot" style="background:${dots[k]||'#7a909e'}"></span>${v} ${escHtml(k)}</div>`).join('') +
+    Object.entries(byType).map(([k,v]) => `<div class="chip" style="opacity:.75">${v} ${escHtml(k)}</div>`).join('');
+
+  document.getElementById('results-body').innerHTML = rows.map(r => {
+    const f = r.issue?.fields || {};
+    return `<tr>
+      <td><a class="issue-key" href="${JIRA_URL}/browse/${r.key}" target="_blank">${r.key}</a></td>
+      <td><div class="issue-summary">${r.issue ? escHtml(f.summary||'') : '<span style="color:var(--muted);font-style:italic">Not found in Jira</span>'}</div></td>
+      <td>${r.issue ? typeBadge(f.issuetype?.name) : '—'}</td>
+      <td>${r.issue ? statusBadge(f.status?.name) : '—'}</td>
+      <td><div class="assignee-cell"><div class="avatar">${initials(f.assignee?.displayName)}</div>${escHtml(f.assignee?.displayName||'Unassigned')}</div></td>
+      <td style="text-align:center"><span class="pr-count">${r.prCount}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('results-section').classList.add('visible');
+  document.getElementById('export-btn').style.display = 'inline-flex';
+  currentData = rows;
+  updateJQL(rows.map(r => r.key));
+}
+
+// ── Export ─────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['Key','Summary','Type','Status','Assignee','PR Count','URL']];
+  for (const r of currentData) {
+    const f = r.issue?.fields || {};
+    rows.push([r.key, f.summary||'', f.issuetype?.name||'', f.status?.name||'', f.assignee?.displayName||'Unassigned', r.prCount, JIRA_URL+'/browse/'+r.key]);
+  }
+  const csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'release-manifest-' + document.getElementById('date-from').value + '-' + document.getElementById('date-to').value + '.csv';
+  a.click();
+}
+
+// ── Generate ───────────────────────────────────────────
+async function runQuery() {
+  if (!connected) { setStatus('run-status','⚠ Please connect first.','error'); return; }
+  const repo   = document.getElementById('bb-repo').value;
+  const branch = document.getElementById('bb-branch').value.trim();
+  const from   = document.getElementById('date-from').value;
+  const to     = document.getElementById('date-to').value;
+  const missing = [];
+  if (!from)   missing.push('From date');
+  if (!to)     missing.push('To date');
+  if (!branch) missing.push('Target Branch');
+  if (missing.length) { setStatus('run-status','⚠ Please fill in: '+missing.join(', '),'error'); return; }
+
+  // Validate branch exists
+  setStatus('run-status', 'Validating branch "' + branch + '"…', 'info');
+  try {
+    await validateBranch(branch.trim(), repo);
+  } catch(e) {
+    setStatus('run-status', '⚠ Branch "' + branch + '" not found in ' + repo + '. Check the name and try again.', 'error');
+    btn.disabled = false; btn.innerHTML = runLabel(); return;
+  }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running…';
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('export-btn').style.display = 'none';
+
+  try {
+    const prs = await fetchMergedPRs(repo, branch, from, to);
+    setStatus('run-status', 'Found ' + prs.length + ' merged PR' + (prs.length!==1?'s':'') + ' — extracting Jira keys…');
+    if (!prs.length) { setStatus('run-status','No merged PRs found for "'+branch+'" in that date range.','error'); btn.disabled=false; btn.innerHTML=runLabel(); return; }
+
+    const keyMap = {};
+    for (const pr of prs) {
+      const key = extractKey(pr.title) || extractKey(pr.src||'');
+      if (key && key.startsWith('MRCDEV-')) { if (!keyMap[key]) keyMap[key]={prCount:0}; keyMap[key].prCount++; }
+    }
+    const keys = Object.keys(keyMap);
+    if (!keys.length) { setStatus('run-status','PRs found but no Jira keys extracted. Check PR naming convention.','error'); btn.disabled=false; btn.innerHTML=runLabel(); return; }
+
+    setStatus('run-status', 'Extracted ' + keys.length + ' Jira keys — fetching issue details…');
+    const issues = await fetchJiraIssues(keys);
+    const rows = keys.sort().map(key => ({key, prCount: keyMap[key].prCount, issue: issues[key]||null}));
+    renderResults(rows, from, to, branch);
+    setStatus('run-status', 'Done — ' + rows.length + ' issue' + (rows.length!==1?'s':'') + ' from ' + prs.length + ' PRs', 'success');
+  } catch(err) {
+    setStatus('run-status', 'Error: ' + err.message, 'error');
+    console.error(err);
+  }
+  btn.disabled = false; btn.innerHTML = runLabel();
+}
+
+function runLabel() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Manifest'; }
+
+// ── JQL ────────────────────────────────────────────────
+function updateJQL(keys) {
+  document.getElementById('jql-text').textContent = 'issueKey in (' + keys.join(', ') + ') ORDER BY issueKey ASC';
+  const btn = document.getElementById('copy-btn');
+  btn.className = 'copy-btn';
+  btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
+}
+function copyJQL() {
+  navigator.clipboard.writeText(document.getElementById('jql-text').textContent).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.className = 'copy-btn copied';
+    btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    setTimeout(() => {
+      btn.className = 'copy-btn';
+      btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
+    }, 2500);
+  });
+}
+</script>
+</body>
+</html>
