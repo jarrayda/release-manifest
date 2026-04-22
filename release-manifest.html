@@ -22,7 +22,7 @@
   .topbar-logo span{color:var(--re-blue);}
   .topbar-div{width:1px;height:20px;background:rgba(255,255,255,0.2);}
   .topbar-sub{font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:0.06em;text-transform:uppercase;}
-  .page{max-width:960px;margin:0 auto;padding:32px 24px 80px;}
+  .page{max-width:1400px;margin:0 auto;padding:32px 32px 80px;}
   .page-title{font-size:26px;font-weight:800;color:var(--re-navy);letter-spacing:-0.03em;margin-bottom:4px;}
   .page-title span{color:var(--re-blue);}
   .page-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
@@ -96,12 +96,7 @@
   .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
   .spinner.blue{border-color:rgba(0,168,219,0.25);border-top-color:var(--re-blue);}
   @keyframes spin{to{transform:rotate(360deg);}}
-  .jql-panel{background:var(--re-navy);border-radius:12px;padding:20px 22px;margin-bottom:20px;}
-  .jql-panel-label{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
-  .jql-text{font-family:'JetBrains Mono',monospace;font-size:13px;color:#e8ecf5;line-height:1.6;word-break:break-all;user-select:all;}
-  .copy-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;}
-  .copy-btn:hover{background:rgba(255,255,255,0.18);color:#fff;}
-  .copy-btn.copied{background:rgba(0,168,107,0.3);border-color:rgba(0,168,107,0.5);color:#4cffb0;}
+
   @media(max-width:700px){.form-grid{grid-template-columns:1fr;}.date-inputs{grid-template-columns:1fr;}.date-arrow{display:none;}.page-title{font-size:22px;}}
 </style>
 </head>
@@ -207,27 +202,22 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export CSV
       </button>
+      <button class="export-btn" id="copy-query-btn" onclick="copyJQL()" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy Query
+      </button>
     </div>
     <div class="status-bar" id="run-status"></div>
   </div>
 
   <div class="results-section" id="results-section">
-    <div class="jql-panel">
-      <div class="jql-panel-label">
-        JQL — paste into Jira to get the same list
-        <button class="copy-btn" id="copy-btn" onclick="copyJQL()">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copy
-        </button>
-      </div>
-      <div class="jql-text" id="jql-text"></div>
-    </div>
+
     <div class="results-title">Release Items</div>
     <div class="results-meta" id="results-meta"></div>
     <div class="summary-row" id="summary-row"></div>
     <div class="table-wrap">
       <table class="issue-table">
-        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status</th><th>Assignee</th><th style="text-align:center">PRs</th></tr></thead>
+        <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status</th><th>Assignee</th><th>Epic</th><th>Team</th><th>Date Merged</th><th style="text-align:center">PRs</th></tr></thead>
         <tbody id="results-body"></tbody>
       </table>
     </div>
@@ -329,6 +319,7 @@ function doReset() {
   setStatus('connect-status','',''); setLocked(true);
   document.getElementById('results-section').classList.remove('visible');
   document.getElementById('export-btn').style.display='none';
+  document.getElementById('copy-query-btn').style.display='none';
   setStatus('run-status','','');
 }
 
@@ -371,9 +362,32 @@ async function fetchJiraIssues(keys) {
   for (let i=0; i<chunks.length; i++) {
     setStatus('run-status','Fetching Jira issues — batch '+(i+1)+'/'+chunks.length+'…');
     const jql  = 'issueKey in ('+chunks[i].join(',')+')';
-    const path = '/rest/api/3/search/jql?jql='+encodeURIComponent(jql)+'&fields=summary,status,issuetype,assignee&maxResults=100';
+    const path = '/rest/api/3/search/jql?jql='+encodeURIComponent(jql)+'&fields=summary,status,issuetype,assignee,parent,customfield_12800&maxResults=100';
     const data = await jiraFetch(path);
     for (const issue of (data.issues||[])) issues[issue.key] = issue;
+  }
+  // Fetch parent summaries for all unique parent keys
+  const parentKeys = [...new Set(
+    Object.values(issues)
+      .map(i => i.fields?.parent?.key)
+      .filter(Boolean)
+  )];
+  if (parentKeys.length) {
+    const parentChunks = [];
+    for (let i=0; i<parentKeys.length; i+=50) parentChunks.push(parentKeys.slice(i,i+50));
+    for (const chunk of parentChunks) {
+      const jql  = 'issueKey in ('+chunk.join(',')+')';
+      const path = '/rest/api/3/search/jql?jql='+encodeURIComponent(jql)+'&fields=summary&maxResults=50';
+      const data = await jiraFetch(path);
+      for (const p of (data.issues||[])) {
+        // Inject summary into any child issues that reference this parent
+        for (const issue of Object.values(issues)) {
+          if (issue.fields?.parent?.key === p.key) {
+            issue.fields.parent.fields = { summary: p.fields.summary };
+          }
+        }
+      }
+    }
   }
   return issues;
 }
@@ -399,6 +413,7 @@ async function runQuery() {
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Running…';
   document.getElementById('results-section').classList.remove('visible');
   document.getElementById('export-btn').style.display='none';
+  document.getElementById('copy-query-btn').style.display='none';
 
   try {
     const prs = await fetchMergedPRs(repo, branch, from, to);
@@ -412,7 +427,10 @@ async function runQuery() {
     const keyMap = {};
     for (const pr of prs) {
       const key = extractKey(pr.title) || extractKey(pr.source?.branch?.name||'');
-      if (key) { if (!keyMap[key]) keyMap[key]={prCount:0}; keyMap[key].prCount++; }
+      if (key) {
+        if (!keyMap[key]) keyMap[key] = {prCount:0, mergedOn: pr.updated_on};
+        else keyMap[key].prCount++;
+      }
     }
     const keys = Object.keys(keyMap);
     if (!keys.length) {
@@ -422,7 +440,7 @@ async function runQuery() {
 
     setStatus('run-status','Extracted '+keys.length+' Jira keys — fetching issue details…');
     const issues = await fetchJiraIssues(keys);
-    const rows = keys.sort().map(key => ({key, prCount:keyMap[key].prCount, issue:issues[key]||null}));
+    const rows = keys.sort().map(key => ({key, prCount:keyMap[key].prCount, issue:issues[key]||null, mergedOn:keyMap[key].mergedOn}));
     renderResults(rows, from, to, branch);
     setStatus('run-status','Done — '+rows.length+' issue'+(rows.length!==1?'s':'')+' from '+prs.length+' PRs','success');
 
@@ -460,12 +478,20 @@ function renderResults(rows, from, to, branch) {
 
   document.getElementById('results-body').innerHTML = rows.map(r => {
     const f = r.issue?.fields||{};
+    const epicKey  = f.parent?.key || null;
+    const epicName = f.parent?.fields?.summary || epicKey || '—';
+    const epicLink = epicKey ? `<a class="issue-key" href="${JIRA_URL}/browse/${epicKey}" target="_blank">${escHtml(epicName)}</a>` : '—';
+    const teamName = f.customfield_12800?.name || '—';
+    const dateMerged = r.mergedOn ? r.mergedOn.substring(0,10) : '—';
     return `<tr>
       <td><a class="issue-key" href="${JIRA_URL}/browse/${r.key}" target="_blank">${r.key}</a></td>
       <td><div class="issue-summary">${r.issue?escHtml(f.summary||''):'<span style="color:var(--muted);font-style:italic">Not found in Jira</span>'}</div></td>
       <td>${r.issue?typeBadge(f.issuetype?.name):'—'}</td>
       <td>${r.issue?statusBadge(f.status?.name):'—'}</td>
       <td><div class="assignee-cell"><div class="avatar">${initials(f.assignee?.displayName)}</div>${escHtml(f.assignee?.displayName||'Unassigned')}</div></td>
+      <td>${r.issue?epicLink:'—'}</td>
+      <td>${r.issue?escHtml(teamName):'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${dateMerged}</td>
       <td style="text-align:center"><span class="pr-count">${r.prCount}</span></td>
     </tr>`;
   }).join('');
@@ -492,20 +518,17 @@ function exportCSV() {
 
 // ── JQL ────────────────────────────────────────────────
 function updateJQL(keys) {
-  document.getElementById('jql-text').textContent = 'issueKey in ('+keys.join(', ')+') ORDER BY issueKey ASC';
-  const btn=document.getElementById('copy-btn');
-  btn.className='copy-btn';
-  btn.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
+  window._currentJQL = 'issueKey in ('+keys.join(', ')+') ORDER BY issueKey ASC';
+  document.getElementById('copy-query-btn').style.display = 'inline-flex';
 }
 function copyJQL() {
-  navigator.clipboard.writeText(document.getElementById('jql-text').textContent).then(()=>{
-    const btn=document.getElementById('copy-btn');
-    btn.className='copy-btn copied';
-    btn.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
-    setTimeout(()=>{
-      btn.className='copy-btn';
-      btn.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
-    },2500);
+  const jql = window._currentJQL || '';
+  navigator.clipboard.writeText(jql).then(()=>{
+    const btn = document.getElementById('copy-query-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    btn.style.borderColor='var(--success)'; btn.style.color='var(--success)';
+    setTimeout(()=>{ btn.innerHTML=orig; btn.style.borderColor=''; btn.style.color=''; },2500);
   });
 }
 </script>
