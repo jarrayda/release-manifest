@@ -462,6 +462,7 @@ function connectLabel() {
 
 function doReset() {
   connected = false; atlEmail = ''; atlToken = '';
+  expandConnect();
   ['atl-email','atl-token','bb-token'].forEach(id => { const el=document.getElementById(id); el.disabled=false; el.value=''; });
   bbToken = '';
   allBranches = []; allRepos = [];
@@ -928,7 +929,6 @@ document.addEventListener('click', e => {
 function renderBranchDropdown(query) {
   const dd = document.getElementById('branch-dropdown');
   const q = query.toLowerCase().trim();
-  // Branches are already filtered by type at fetch time — just apply search query
   const filtered = q ? allBranches.filter(n => n.toLowerCase().includes(q)) : allBranches;
 
   if (!filtered.length) {
@@ -936,24 +936,31 @@ function renderBranchDropdown(query) {
     return;
   }
 
-  const main     = filtered.filter(n => ['master','main','development','production'].includes(n));
-  const releases = filtered.filter(n => n.startsWith('release/')).sort().reverse();
-  const features = filtered.filter(n => n.startsWith('feature/'));
-  const others   = filtered.filter(n => !main.includes(n) && !n.startsWith('release/') && !n.startsWith('feature/'));
-
   function highlight(name) {
     if (!q) return escHtml(name);
     const safe = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return escHtml(name).replace(new RegExp(safe, 'gi'), m => '<mark>'+m+'</mark>');
   }
-  function group(label, items) {
-    if (!items.length) return '';
-    return '<div class="branch-group"><div class="branch-group-label">'+label+'</div>' +
-      items.map(n => '<div class="branch-item" onmousedown="selectBranch(this)" data-branch="'+escHtml(n)+'">' + highlight(n) + '</div>').join('') +
-      '</div>';
+  function item(n) {
+    return '<div class="branch-item" onmousedown="selectBranch(this)" data-branch="'+escHtml(n)+'">'+highlight(n)+'</div>';
   }
 
-  dd.innerHTML = group('Main', main) + group('Release', releases) + group('Feature', features) + (others.length ? group('Other', others) : '');
+  if (!q) {
+    // No search — render flat list in pre-sorted order (release versions desc, then others)
+    dd.innerHTML = filtered.map(item).join('');
+  } else {
+    // Search active — group by type, releases sorted by version desc
+    const MAIN = ['master','main','development','production'];
+    const main     = filtered.filter(n => MAIN.includes(n));
+    const releases = filtered.filter(n => n.startsWith('release/')).sort(compareVersions);
+    const features = filtered.filter(n => n.startsWith('feature/'));
+    const others   = filtered.filter(n => !MAIN.includes(n) && !n.startsWith('release/') && !n.startsWith('feature/'));
+    function group(label, items) {
+      if (!items.length) return '';
+      return '<div class="branch-group"><div class="branch-group-label">'+label+'</div>'+items.map(item).join('')+'</div>';
+    }
+    dd.innerHTML = group('Main', main) + group('Release', releases) + group('Feature', features) + (others.length ? group('Other', others) : '');
+  }
 }
 
 function filterBranches() {
