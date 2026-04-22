@@ -17,6 +17,15 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px;}
+  /* Collapsible connect section */
+  .connect-body{transition:max-height .3s ease, opacity .3s ease, padding .3s ease;overflow:hidden;max-height:600px;opacity:1;}
+  .connect-body.collapsed{max-height:0;opacity:0;padding:0;}
+  .connect-collapsed-bar{display:none;align-items:center;gap:12px;padding:2px 0 4px;}
+  .connect-collapsed-bar.visible{display:flex;}
+  .connected-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--success);background:#edfaf4;border:1px solid rgba(0,168,107,0.25);border-radius:20px;padding:4px 12px;}
+  .connected-pill svg{width:11px;height:11px;}
+  .connected-user{font-size:13px;color:var(--text-mid);font-weight:500;}
+
   .topbar{background:var(--re-navy);padding:0 32px;display:flex;align-items:center;height:56px;gap:12px;}
   .topbar-logo{font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.03em;}
   .topbar-logo span{color:var(--re-blue);}
@@ -168,6 +177,17 @@
         Connected
       </span>
     </div>
+    <!-- Collapsed summary bar — shown when connected and collapsed -->
+    <div class="connect-collapsed-bar" id="connect-collapsed-bar">
+      <div class="connected-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        Connected
+      </div>
+      <span class="connected-user" id="connected-user-label"></span>
+      <button class="reset-link" onclick="doReset()" style="margin-left:4px;">Disconnect</button>
+
+    </div>
+    <div class="connect-body" id="connect-body">
     <div class="form-grid" style="margin-bottom:10px;">
       <div class="field">
         <label>Atlassian Email <button onclick="clearCachedEmail()" id="clear-email-btn" title="Clear saved email" style="margin-left:6px;font-size:10px;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;vertical-align:middle;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">✕ clear</button></label>
@@ -199,6 +219,7 @@
       <button class="reset-link" id="reset-link" onclick="doReset()" style="display:none;">Disconnect</button>
     </div>
     <div class="status-bar" id="connect-status"></div>
+    </div><!-- end connect-body -->
   </div>
 
   <div class="card locked" id="card-query">
@@ -408,15 +429,31 @@ async function doConnect() {
     document.getElementById('bb-token').disabled = true;
     btn.style.display = 'none';
     document.getElementById('reset-link').style.display = 'inline';
-    setStatus('connect-status','Connected as ' + me.displayName + ' (' + me.emailAddress + ')','success');
+    const userLabel = me.displayName + ' (' + me.emailAddress + ')';
+    setStatus('connect-status','Connected as ' + userLabel,'success');
+    document.getElementById('connected-user-label').textContent = userLabel;
     // Load repos, then branches for first selected repo
     await loadRepos();
+    // Auto-collapse connect section
+    setTimeout(collapseConnect, 800);
   } catch(err) {
     setStatus('connect-status','Error: ' + err.message,'error');
     atlEmail = ''; atlToken = '';
     btn.disabled = false;
     btn.innerHTML = connectLabel();
   }
+}
+
+function collapseConnect() {
+  document.getElementById('connect-body').classList.add('collapsed');
+  document.getElementById('connect-collapsed-bar').classList.add('visible');
+  document.getElementById('connected-badge').classList.remove('visible');
+}
+
+function expandConnect() {
+  document.getElementById('connect-body').classList.remove('collapsed');
+  document.getElementById('connect-collapsed-bar').classList.remove('visible');
+  document.getElementById('connected-badge').classList.add('visible');
 }
 
 function connectLabel() {
