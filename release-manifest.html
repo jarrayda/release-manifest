@@ -772,15 +772,50 @@ async function loadBranchesFromAll(repos) {
       }
     }
 
-    // Sort: branches with recent PR activity first (by date desc), then remaining alphabetically
-    const withActivity = [...combined]
+    // Sort release branches by version number descending (highest version first),
+    // then other branches by most recent PR activity, then remaining alphabetically
+    function parseVersion(name) {
+      // Extract version string after prefix e.g. "release/3.19.04" -> "3.19.04"
+      const m = name.match(/^(?:release\/|feature\/|hotfix\/)?(.+)$/i);
+      const vstr = m ? m[1] : name;
+      // Split into numeric and non-numeric parts for natural sort
+      const parts = vstr.split(/[.\-_]+/);
+      return parts.map(p => {
+        const n = parseInt(p, 10);
+        return isNaN(n) ? p.toLowerCase() : n;
+      });
+    }
+
+    function compareVersions(a, b) {
+      const pa = parseVersion(a), pb = parseVersion(b);
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const va = pa[i] ?? -1, vb = pb[i] ?? -1;
+        if (typeof va === 'number' && typeof vb === 'number') {
+          if (va !== vb) return vb - va; // higher number first
+        } else {
+          const s = String(va).localeCompare(String(vb));
+          if (s !== 0) return s;
+        }
+      }
+      return 0;
+    }
+
+    // Separate release branches from others — releases always sort by version desc
+    const releases    = [...combined].filter(b => b.startsWith('release/'));
+    const nonReleases = [...combined].filter(b => !b.startsWith('release/'));
+
+    // Sort release branches by version number descending
+    releases.sort(compareVersions);
+
+    // Sort non-release branches: PR activity first (by date desc), then alphabetically
+    const withActivity = nonReleases
       .filter(b => branchActivity.has(b))
       .sort((a, b) => branchActivity.get(b) - branchActivity.get(a));
-    const withoutActivity = [...combined]
+    const withoutActivity = nonReleases
       .filter(b => !branchActivity.has(b))
       .sort();
 
-    allBranches = [...withActivity, ...withoutActivity];
+    allBranches = [...releases, ...withActivity, ...withoutActivity];
     filter.placeholder = 'Search branches… (' + allBranches.length + ' loaded)';
     renderBranchDropdown('');
   } catch(e) {
