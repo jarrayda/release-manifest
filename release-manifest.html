@@ -371,7 +371,7 @@ async function fetchJiraIssues(keys) {
   for (let i=0; i<chunks.length; i++) {
     setStatus('run-status','Fetching Jira issues — batch '+(i+1)+'/'+chunks.length+'…');
     const jql  = 'issueKey in ('+chunks[i].join(',')+')';
-    const path = '/rest/api/3/search?jql='+encodeURIComponent(jql)+'&fields=summary,status,issuetype,assignee&maxResults=100';
+    const path = '/rest/api/3/search/jql?jql='+encodeURIComponent(jql)+'&fields=summary,status,issuetype,assignee&maxResults=100';
     const data = await jiraFetch(path);
     for (const issue of (data.issues||[])) issues[issue.key] = issue;
   }
