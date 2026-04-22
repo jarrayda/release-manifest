@@ -130,12 +130,22 @@
         <input type="text" id="atl-email" placeholder="your@email.com" autocomplete="off">
       </div>
       <div class="field">
-        <label>Atlassian API Token</label>
-        <input type="password" id="atl-token" placeholder="API token" autocomplete="off">
+        <label>Jira API Token</label>
+        <input type="password" id="atl-token" placeholder="Jira API token" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-grid" style="margin-bottom:10px;">
+      <div class="field">
+        <label>Bitbucket API Token</label>
+        <input type="password" id="bb-token" placeholder="Bitbucket-scoped API token" autocomplete="off">
+      </div>
+      <div class="field" style="justify-content:flex-end;padding-top:20px;">
+        <span style="font-size:11px;color:var(--muted);line-height:1.5;">Bitbucket token needs a <strong>separate</strong> scoped token — see help below.</span>
       </div>
     </div>
     <div class="help-text">
-      Create a token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">id.atlassian.com → Security → API tokens</a> — select <em>Bitbucket</em> as the app with <em>Repositories: Read</em> and <em>Pull requests: Read</em> scopes. Same token authenticates both Jira and Bitbucket.
+      <strong>Jira token:</strong> Create at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">id.atlassian.com → API tokens</a> (any scope).<br>
+      <strong>Bitbucket token:</strong> Same page — click <em>Create API token with scopes</em>, select app <em>Bitbucket</em>, scopes <em>Repositories: Read</em> + <em>Pull requests: Read</em>.
     </div>
     <div class="btn-row">
       <button class="connect-btn" id="connect-btn" onclick="doConnect()">
@@ -229,7 +239,7 @@ const JIRA_URL    = 'https://maropost.atlassian.net';
 const BB_WORKSPACE = 'maropost-retail-cloud';
 const WORKER      = 'https://releasemanifest.jarrayda.workers.dev';
 
-let atlEmail = '', atlToken = '';
+let atlEmail = '', atlToken = '', bbToken = '';
 let connected = false;
 
 // ── Init default dates ─────────────────────────────────
@@ -242,7 +252,8 @@ let connected = false;
 // ── Helpers ────────────────────────────────────────────
 function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function basicAuth() { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
+function jiraAuth() { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
+function bbAuth()   { return 'Basic ' + b64(atlEmail + ':' + bbToken); }
 
 function setStatus(id, msg, type='') {
   const el = document.getElementById(id);
@@ -265,21 +276,22 @@ async function workerFetch(url, authHeader) {
   return resp.json();
 }
 
-function bbFetch(path)   { return workerFetch('https://api.bitbucket.org/2.0' + path, basicAuth()); }
-function jiraFetch(path) { return workerFetch(JIRA_URL + path, basicAuth()); }
+function bbFetch(path)   { return workerFetch('https://api.bitbucket.org/2.0' + path, bbAuth()); }
+function jiraFetch(path) { return workerFetch(JIRA_URL + path, jiraAuth()); }
 
 // ── Connect ────────────────────────────────────────────
 async function doConnect() {
-  const email = document.getElementById('atl-email').value.trim();
-  const token = document.getElementById('atl-token').value.trim();
-  if (!email || !token) { setStatus('connect-status','⚠ Please enter email and API token.','error'); return; }
+  const email  = document.getElementById('atl-email').value.trim();
+  const token  = document.getElementById('atl-token').value.trim();
+  const bbTok  = document.getElementById('bb-token').value.trim();
+  if (!email || !token || !bbTok) { setStatus('connect-status','⚠ Please fill in all three fields.','error'); return; }
 
   const btn = document.getElementById('connect-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner blue"></span> Connecting…';
   setStatus('connect-status','Verifying credentials…','info');
 
-  atlEmail = email; atlToken = token;
+  atlEmail = email; atlToken = token; bbToken = bbTok;
 
   try {
     const me = await jiraFetch('/rest/api/3/myself');
@@ -290,6 +302,7 @@ async function doConnect() {
     document.getElementById('connected-badge').classList.add('visible');
     document.getElementById('atl-email').disabled = true;
     document.getElementById('atl-token').disabled = true;
+    document.getElementById('bb-token').disabled = true;
     btn.style.display = 'none';
     document.getElementById('reset-link').style.display = 'inline';
     setStatus('connect-status','Connected as ' + me.displayName + ' (' + me.emailAddress + ')','success');
@@ -307,7 +320,8 @@ function connectLabel() {
 
 function doReset() {
   connected = false; atlEmail = ''; atlToken = '';
-  ['atl-email','atl-token'].forEach(id => { const el=document.getElementById(id); el.disabled=false; el.value=''; });
+  ['atl-email','atl-token','bb-token'].forEach(id => { const el=document.getElementById(id); el.disabled=false; el.value=''; });
+  bbToken = '';
   const btn = document.getElementById('connect-btn');
   btn.style.display='inline-flex'; btn.disabled=false; btn.innerHTML=connectLabel();
   document.getElementById('reset-link').style.display='none';
