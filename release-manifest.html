@@ -387,15 +387,6 @@ async function runQuery() {
   document.getElementById('export-btn').style.display='none';
 
   try {
-    // Validate branch exists
-    setStatus('run-status','Validating branch…','info');
-    try {
-      await validateBranch(repo, branch);
-    } catch(e) {
-      setStatus('run-status','⚠ Branch "'+branch+'" not found in '+repo+'. Check the name and try again.','error');
-      btn.disabled=false; btn.innerHTML=runLabel(); return;
-    }
-
     const prs = await fetchMergedPRs(repo, branch, from, to);
     setStatus('run-status','Found '+prs.length+' merged PR'+(prs.length!==1?'s':'')+' — extracting Jira keys…');
 
@@ -506,4 +497,3 @@ function copyJQL() {
 </script>
 </body>
 </html>
-vvvvvvvvv
