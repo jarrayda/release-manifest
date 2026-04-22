@@ -616,6 +616,7 @@ document.addEventListener('click', e => {
 let allBranches = [];
 
 async function fetchBranchesForRepo(repo) {
+  // Returns Set of branch names (no date - we don't use target.date)
   const branches = new Set();
   let url = 'https://api.bitbucket.org/2.0/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/refs/branches?pagelen=100&sort=-target.date';
   const cutoff = new Date('2025-01-01T00:00:00Z');
@@ -637,6 +638,26 @@ async function fetchBranchesForRepo(repo) {
   return branches;
 }
 
+async function fetchRecentPRBranchDates(repo) {
+  // Fetch recent merged PRs and return a map of destination branch -> most recent PR updated_on date
+  // We only need the first few pages to get a good recency signal
+  const branchDates = new Map();
+  let url = 'https://api.bitbucket.org/2.0/repositories/' + encodeURIComponent(BB_WORKSPACE) + '/' + encodeURIComponent(repo) + '/pullrequests?state=MERGED&pagelen=100&sort=-updated_on&page=1';
+  try {
+    const data = await bbFetch(url.replace('https://api.bitbucket.org/2.0','')).catch(() => ({}));
+    for (const pr of (data.values || [])) {
+      const dest = pr.destination?.branch?.name;
+      const updated = pr.updated_on ? new Date(pr.updated_on) : null;
+      if (dest && updated) {
+        if (!branchDates.has(dest) || updated > branchDates.get(dest)) {
+          branchDates.set(dest, updated);
+        }
+      }
+    }
+  } catch(e) {}
+  return branchDates;
+}
+
 async function loadBranchesFromAll(repos) {
   allBranches = [];
   const filter = document.getElementById('bb-branch-filter');
@@ -645,12 +666,35 @@ async function loadBranchesFromAll(repos) {
   dd.innerHTML = '<div class="branch-loading"><span class="spinner blue"></span> Loading branches from ' + repos.length + ' repo' + (repos.length !== 1 ? 's' : '') + '…</div>';
 
   try {
-    // Fetch branches from all repos in parallel
-    const results = await Promise.all(repos.map(r => fetchBranchesForRepo(r)));
+    // Fetch branch names and recent PR activity in parallel for all repos
+    const [branchResults, prDateResults] = await Promise.all([
+      Promise.all(repos.map(r => fetchBranchesForRepo(r))),
+      Promise.all(repos.map(r => fetchRecentPRBranchDates(r)))
+    ]);
+
     // Union of all branch names
     const combined = new Set();
-    for (const set of results) for (const b of set) combined.add(b);
-    allBranches = [...combined].sort();
+    for (const set of branchResults) for (const b of set) combined.add(b);
+
+    // Merge PR date maps — keep most recent date per branch across all repos
+    const branchActivity = new Map();
+    for (const map of prDateResults) {
+      for (const [branch, date] of map) {
+        if (!branchActivity.has(branch) || date > branchActivity.get(branch)) {
+          branchActivity.set(branch, date);
+        }
+      }
+    }
+
+    // Sort: branches with recent PR activity first (by date desc), then remaining alphabetically
+    const withActivity = [...combined]
+      .filter(b => branchActivity.has(b))
+      .sort((a, b) => branchActivity.get(b) - branchActivity.get(a));
+    const withoutActivity = [...combined]
+      .filter(b => !branchActivity.has(b))
+      .sort();
+
+    allBranches = [...withActivity, ...withoutActivity];
     filter.placeholder = 'Search branches… (' + allBranches.length + ' loaded)';
     renderBranchDropdown('');
   } catch(e) {
