@@ -170,7 +170,7 @@
     </div>
     <div class="form-grid" style="margin-bottom:10px;">
       <div class="field">
-        <label>Atlassian Email</label>
+        <label>Atlassian Email <button onclick="clearCachedEmail()" id="clear-email-btn" title="Clear saved email" style="margin-left:6px;font-size:10px;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;vertical-align:middle;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">✕ clear</button></label>
         <input type="text" id="atl-email" placeholder="your@email.com" autocomplete="off">
       </div>
       <div class="field">
@@ -331,13 +331,25 @@ let connected = false;
   // Pre-fill email from cache
   try {
     const cached = localStorage.getItem('rm_atl_email');
-    if (cached) document.getElementById('atl-email').value = cached;
+    if (cached) {
+      document.getElementById('atl-email').value = cached;
+    } else {
+      // Hide clear button if no cached email
+      const btn = document.getElementById('clear-email-btn');
+      if (btn) btn.style.display = 'none';
+    }
   } catch(e) {}
 })();
 
 // ── Helpers ────────────────────────────────────────────
 function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function clearCachedEmail() {
+  try { localStorage.removeItem('rm_atl_email'); } catch(e) {}
+  document.getElementById('atl-email').value = '';
+  document.getElementById('clear-email-btn').style.display = 'none';
+}
+
 function jiraAuth() { return 'Basic ' + b64(atlEmail + ':' + atlToken); }
 function bbAuth()   { return 'Basic ' + b64(atlEmail + ':' + bbToken); }
 
@@ -378,7 +390,11 @@ async function doConnect() {
   setStatus('connect-status','Verifying credentials…','info');
 
   atlEmail = email; atlToken = token; bbToken = bbTok;
-  try { localStorage.setItem('rm_atl_email', email); } catch(e) {}
+  try {
+    localStorage.setItem('rm_atl_email', email);
+    const btn = document.getElementById('clear-email-btn');
+    if (btn) btn.style.display = '';
+  } catch(e) {}
 
   try {
     const me = await jiraFetch('/rest/api/3/myself');
